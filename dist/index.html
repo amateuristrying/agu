@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#050505">
+    <meta name="description" content="AGU — Artificial General Understanding. A new perspective on the relationship between human context and artificial intelligence.">
+    <meta property="og:title" content="AGU — Beyond intelligence.">
+    <meta property="og:description" content="Artificial General Understanding. Intelligence sees the information. Understanding sees you.">
+    <title>AGU — Beyond intelligence.</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23050505'/%3E%3Cpath d='M16 46 29 18h6l13 28h-8l-3-7H26l-3 7zm13-14h5l-2.5-7z' fill='%23ecece7'/%3E%3C/svg%3E">
+    <link rel="preload" as="image" href="./assets/metal-human-poster.jpg">
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <main class="hero" id="hero">
+      <div class="scene" aria-hidden="true">
+        <video class="figure" id="figure" preload="auto" muted playsinline disablepictureinpicture disableremoteplayback poster="./assets/metal-human-poster.jpg">
+          <source src="./assets/metal-human-scrub.mp4" type="video/mp4">
+        </video>
+        <div class="scene-shade"></div>
+      </div>
+
+      <header class="header">
+        <a class="wordmark" href="./" aria-label="AGU home">agu<span class="brand-star" aria-hidden="true">✳</span></a>
+        <span class="brand-definition">Artificial General Understanding</span>
+        <button class="vision-link" data-open-vision>Our perspective <span aria-hidden="true">↗</span></button>
+      </header>
+
+      <section class="hero-copy" aria-labelledby="hero-title">
+        <div class="eyebrow"><span class="small-cross" aria-hidden="true">+</span> A NEW DEPTH OF INTELLIGENCE</div>
+        <h1 id="hero-title">Beyond<br>intelligence<span class="period">.</span></h1>
+        <p class="hero-description">Intelligence sees the information.<br>Understanding sees <em>you.</em></p>
+        <button class="discover-button" data-open-vision><span>Discover AGU</span><span class="button-arrow" aria-hidden="true">↗</span></button>
+      </section>
+
+      <aside class="side-note" aria-label="Our focus">HUMAN CONTEXT. MACHINE CLARITY.</aside>
+      <div class="figure-caption" aria-hidden="true"><span class="caption-rule"></span><span>A different way<br>to see the world.</span></div>
+
+      <footer class="hero-footer">
+        <div class="footer-identity"><span class="footer-index">01 /</span><span>Built around<br>the way you see.</span></div>
+        <div class="footer-end"><span>LESS ARTIFICIAL.</span><span>MORE UNDERSTANDING.</span></div>
+      </footer>
+    </main>
+
+    <dialog id="vision-dialog" aria-labelledby="vision-title">
+      <div class="dialog-top"><span class="dialog-brand">agu<span aria-hidden="true">✳</span></span><button id="close-dialog" class="close-button" aria-label="Close our perspective">×</button></div>
+      <p class="eyebrow">OUR PERSPECTIVE</p>
+      <h2 id="vision-title">Knowing more.<br><em>Understanding deeper.</em></h2>
+      <p>Intelligence connects information. Understanding gives it meaning.</p>
+      <p>AGU stands for Artificial General Understanding — an idea centred on the context, intention, and perspective behind every human interaction.</p>
+      <div class="dialog-bottom"><span>IT STARTS WITH A DIFFERENT PERSPECTIVE.</span><button id="experience-button">Experience it <span aria-hidden="true">↗</span></button></div>
+    </dialog>
+  </body>
+</html>
