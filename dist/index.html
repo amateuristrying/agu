@@ -11,6 +11,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23050505'/%3E%3Cpath d='M16 46 29 18h6l13 28h-8l-3-7H26l-3 7zm13-14h5l-2.5-7z' fill='%23ecece7'/%3E%3C/svg%3E">
     <link rel="preload" as="image" href="./assets/metal-human-poster.jpg">
     <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./chapter.css">
     <script src="./app.js" defer></script>
   </head>
   <body>
@@ -23,14 +24,14 @@
       </div>
 
       <header class="header">
-        <a class="wordmark" href="./" aria-label="AGU home">agu<span class="brand-star" aria-hidden="true">✳</span></a>
+        <a class="wordmark" href="./" aria-label="AGU home" data-home>agu<span class="brand-star" aria-hidden="true">✳</span></a>
         <span class="brand-definition">Artificial General Understanding</span>
         <button class="vision-link" data-open-vision>Our perspective <span aria-hidden="true">↗</span></button>
       </header>
 
       <section class="hero-copy" aria-labelledby="hero-title">
         <div class="eyebrow"><span class="small-cross" aria-hidden="true">+</span> A NEW DEPTH OF INTELLIGENCE</div>
-        <h1 id="hero-title">Beyond<br>intelligence<span class="period">.</span></h1>
+        <h1 id="hero-title" tabindex="-1">Beyond<br>intelligence<span class="period">.</span></h1>
         <p class="hero-description">Intelligence sees the information.<br>Understanding sees <em>you.</em></p>
         <button class="discover-button" data-open-vision><span>Discover AGU</span><span class="button-arrow" aria-hidden="true">↗</span></button>
       </section>
@@ -44,13 +45,50 @@
       </footer>
     </main>
 
-    <dialog id="vision-dialog" aria-labelledby="vision-title">
-      <div class="dialog-top"><span class="dialog-brand">agu<span aria-hidden="true">✳</span></span><button id="close-dialog" class="close-button" aria-label="Close our perspective">×</button></div>
-      <p class="eyebrow">OUR PERSPECTIVE</p>
-      <h2 id="vision-title">Knowing more.<br><em>Understanding deeper.</em></h2>
-      <p>Intelligence connects information. Understanding gives it meaning.</p>
-      <p>AGU stands for Artificial General Understanding — an idea centred on the context, intention, and perspective behind every human interaction.</p>
-      <div class="dialog-bottom"><span>IT STARTS WITH A DIFFERENT PERSPECTIVE.</span><button id="experience-button">Experience it <span aria-hidden="true">↗</span></button></div>
-    </dialog>
+    <main class="understanding" id="understanding" hidden aria-labelledby="understanding-title">
+      <header class="chapter-header">
+        <a class="wordmark" href="./" aria-label="Back to AGU" data-home>agu<span class="brand-star" aria-hidden="true">✳</span></a>
+        <span class="chapter-label">A DIFFERENT PERSPECTIVE / 002</span>
+        <button class="back-link" data-home><span aria-hidden="true">↖</span> Back to the beginning</button>
+      </header>
+
+      <section class="manifesto">
+        <div class="manifesto-frame">
+          <span class="corner corner-tl" aria-hidden="true"></span><span class="corner corner-tr" aria-hidden="true"></span>
+          <h1 id="understanding-title" tabindex="-1"><span class="headline-line"><span>Intelligence knows.</span></span><span class="headline-line"><span>Understanding</span></span><span class="headline-line"><span>sees the whole.</span></span></h1>
+          <span class="corner corner-bl" aria-hidden="true"></span><span class="corner corner-br" aria-hidden="true"></span>
+        </div>
+
+        <div class="manifesto-details">
+          <article class="thought">
+            <h3><span>01</span> Beyond the answer</h3>
+            <p>An answer is only useful when it understands the question behind the question. The context. The intent. The person asking.</p>
+          </article>
+          <article class="thought">
+            <h3><span>02</span> Towards understanding</h3>
+            <p>AGU starts there. Connecting information to the world it belongs to. Moving from knowing <em>what</em> to understanding <em>why.</em></p>
+          </article>
+          <figure class="vector-study">
+            <figcaption><span>03 / CONNECTING THE PIECES</span><button class="motion-toggle" id="motion-toggle" aria-label="Pause geometric animation" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="pause-symbol" d="M5 3v10M11 3v10"/><path class="play-symbol" d="m5 3 8 5-8 5z"/></svg></button></figcaption>
+            <svg class="understanding-vector" viewBox="0 0 320 250" aria-hidden="true" focusable="false">
+              <g class="vector-orbit"><rect x="41" y="29" width="25" height="25" rx="6" fill="none" stroke="#bfc1ca" stroke-width="1"/></g>
+              <g class="vector-blue"><rect x="92" y="49" width="118" height="118" fill="#3326c9"/></g>
+              <g class="vector-red"><rect x="58" y="128" width="76" height="76" fill="#f52d42"/></g>
+              <g class="vector-outline-a"><rect x="94" y="82" width="118" height="118" fill="none" stroke="#272729" stroke-width="1"/></g>
+              <g class="vector-cyan"><circle cx="174" cy="134" r="50" fill="#a8e6ec"/></g>
+              <g class="vector-quarter"><path d="M94 130a58 58 0 0 1 58 58H94Z" fill="#a8e6ec"/></g>
+              <g class="vector-outline-b"><rect x="179" y="139" width="76" height="76" fill="none" stroke="#272729" stroke-width="1"/></g>
+              <g class="vector-dot"><circle cx="266" cy="55" r="4" fill="#3326c9"/></g>
+              <g class="vector-square"><rect x="247" y="214" width="7" height="7" fill="#f52d42"/></g>
+            </svg>
+          </figure>
+        </div>
+      </section>
+      <footer class="chapter-footer"><span>ARTIFICIAL GENERAL UNDERSTANDING</span><span>HUMAN CONTEXT. MACHINE CLARITY.</span></footer>
+    </main>
+
+    <div class="page-transition" id="page-transition" aria-hidden="true" hidden>
+      <div class="transition-title"><span><b>Artificial</b></span> <span><b>General</b></span> <span><b>Understanding</b></span></div>
+    </div>
   </body>
 </html>
