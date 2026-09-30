@@ -12,12 +12,16 @@
     <link rel="preload" as="image" href="./assets/metal-human-poster.jpg" fetchpriority="high">
     <link rel="stylesheet" href="./styles.css">
     <link rel="stylesheet" href="./chapter.css">
+    <link rel="stylesheet" href="./capabilities.css">
+    <script src="./vendor/gsap.min.js" defer></script>
+    <script src="./console.js" defer></script>
+    <script src="./head-tracking.js" defer></script>
     <script src="./app.js" defer></script>
   </head>
   <body>
     <main class="hero" id="hero">
       <div class="scene" aria-hidden="true">
-        <video class="figure" id="figure" preload="none" data-src="./assets/metal-human-scrub.mp4" muted playsinline disablepictureinpicture disableremoteplayback poster="./assets/metal-human-poster.jpg"></video>
+        <video class="figure" id="figure" preload="none" data-src="./assets/metal-human-scrub.mp4" data-mobile-src="./assets/metal-human-mobile.mp4" muted playsinline disablepictureinpicture disableremoteplayback poster="./assets/metal-human-poster.jpg"></video>
         <div class="scene-shade"></div>
       </div>
 
@@ -82,7 +86,57 @@
           </figure>
         </div>
       </section>
-      <footer class="chapter-footer"><span>ARTIFICIAL GENERAL UNDERSTANDING</span><span>HUMAN CONTEXT. MACHINE CLARITY.</span></footer>
+      <footer class="chapter-footer"><span>ARTIFICIAL GENERAL UNDERSTANDING</span><button class="chapter-next" data-open-capabilities>Explore the full picture <span aria-hidden="true">↗</span></button></footer>
+    </main>
+
+    <main class="capabilities" id="capabilities" hidden aria-labelledby="capabilities-title">
+      <header class="chapter-header">
+        <a class="wordmark" href="./" aria-label="AGU home" data-home>agu<span class="brand-star" aria-hidden="true">✳</span></a>
+        <span class="chapter-label">THE COMPLETE PICTURE / 003</span>
+        <button class="back-link" data-open-vision><span aria-hidden="true">↖</span> Our perspective</button>
+      </header>
+      <section class="capability-intro">
+        <div><p class="capability-kicker"><span></span> THE FULL SCOPE OF AGU</p><h1 id="capabilities-title" tabindex="-1"><span>Your entire project.</span><span>In perspective.</span></h1></div>
+        <p class="capability-description">Every resource. Every decision. Every commit.<br>AGU connects the history of your work into a living picture of where you are, how you got here, and what comes next.</p>
+      </section>
+      <section class="workspace-showcase" aria-label="Interactive AGU product preview">
+        <div class="demo-caption"><span><span class="demo-cross">+</span> A WINDOW INTO UNDERSTANDING</span><span>INTERACTIVE PREVIEW <span class="demo-tag">PROJECT ATLAS</span></span></div>
+        <div class="retro-desktop" id="retro-desktop" data-pane="overview">
+          <div class="desktop-titlebar"><span class="desktop-app-icon" aria-hidden="true">▧</span><strong>AGU <span>— Artificial General Understanding</span></strong><span class="desktop-version">v0.0.1</span><div class="window-actions"><button id="desktop-minimize" aria-label="Minimize preview" aria-expanded="true">_</button><button id="desktop-expand" aria-label="Expand preview" aria-pressed="false">□</button></div></div>
+          <div class="desktop-body" id="desktop-body">
+            <div class="desktop-menubar"><span>PROJECT ATLAS</span><span class="demo-mode">DEMO WORKSPACE</span><button id="console-motion" aria-pressed="false">Pause motion</button><span class="online-status"><i></i> SYSTEM ONLINE</span></div>
+            <div class="mobile-workspace-tabs" role="tablist" aria-label="Workspace panels"><button role="tab" aria-selected="true" data-pane="overview" aria-controls="workspace-overview">Overview</button><button role="tab" aria-selected="false" data-pane="sources" aria-controls="workspace-sources">Sources</button><button role="tab" aria-selected="false" data-pane="memory" aria-controls="workspace-memory">Memory</button></div>
+            <div class="desktop-grid">
+              <div class="desktop-column source-column" id="workspace-sources">
+                <section class="retro-panel"><h2 class="panel-title"><span aria-hidden="true">▧</span> CONTEXT SOURCES <span class="panel-count">05</span></h2><div class="source-head"><span>Source</span><span>Status</span></div><div class="source-list">
+                  <button data-resource="files" aria-pressed="true" class="source-row is-selected"><span class="pixel-icon folder-icon" aria-hidden="true"></span><span>Local files</span><i></i></button>
+                  <button data-resource="web" aria-pressed="false" class="source-row"><span class="pixel-icon globe-icon" aria-hidden="true">◎</span><span>Web</span><i></i></button>
+                  <button data-resource="git" aria-pressed="false" class="source-row"><span class="pixel-icon" aria-hidden="true">⑂</span><span>GitHub</span><i></i></button>
+                  <button data-resource="db" aria-pressed="false" class="source-row"><span class="pixel-icon database-icon" aria-hidden="true">▤</span><span>PostgreSQL</span><i></i></button>
+                  <button data-resource="notes" aria-pressed="false" class="source-row"><span class="pixel-icon" aria-hidden="true">▧</span><span>Notes</span><i></i></button>
+                </div><div class="source-foot">5 sources · one shared context</div></section>
+                <section class="retro-panel active-context"><h2 class="panel-title"><span aria-hidden="true">▣</span> ACTIVE CONTEXT</h2><div class="context-list"><span class="context-selected">▰ &nbsp; Project Atlas</span><span>├ &nbsp; architecture.md</span><span>├ &nbsp; api-service / main</span><span>├ &nbsp; release-v4.2</span><span>├ &nbsp; deployment.log</span><span>├ &nbsp; product-brief.pdf</span><span>└ &nbsp; team-decisions.md</span></div><div class="resource-detail" aria-live="polite"><span class="retro-label">SELECTED RESOURCE</span><strong id="resource-name">Local files</strong><p id="resource-description">Architecture, product briefs and decisions. The documents behind the work.</p></div></section>
+              </div>
+              <div class="desktop-column overview-column" id="workspace-overview">
+                <section class="retro-panel query-panel"><h2 class="panel-title"><span aria-hidden="true">▣</span> UNDERSTANDING CONSOLE</h2><form id="context-query"><label for="query-select">Query / Task</label><div class="query-row"><select id="query-select"><option value="overview">What is happening in Project Atlas?</option><option value="changes">What changed in the latest release?</option><option value="decisions">Why did we choose this architecture?</option></select><button class="retro-button" id="query-execute" type="submit">EXECUTE <span aria-hidden="true">↵</span></button></div></form></section>
+                <section class="retro-panel current-state"><h2 class="panel-title"><span aria-hidden="true">⊞</span> CURRENT UNDERSTANDING <span class="panel-count" id="result-number">01</span></h2><div class="state-body"><div class="state-stats"><span>Project <b>Atlas</b></span><span>Status <b class="state-status" id="project-status">In progress</b></span><span>Context <b>Connected</b></span><span>Coverage <b id="coverage-count">100%</b></span><div class="coverage-track"><div class="coverage-fill"></div></div></div><div class="state-summary" aria-live="polite"><span class="retro-label" id="summary-label">THE CURRENT PICTURE</span><p id="project-summary">Release 4.2 is in staging. A payment API change connects the latest commits, an open incident and a pending review. The next step is clear.</p></div></div></section>
+                <div class="relationship-row"><section class="retro-panel entities-panel"><h2 class="panel-title"><span aria-hidden="true">▦</span> ENTITIES</h2><ul class="entity-list"><li><i>▣</i>Project Atlas <span>Project</span></li><li><i>◇</i>Payment API <span>Service</span></li><li><i>♧</i>Engineering <span>Team</span></li><li><i>◈</i>Release 4.2 <span>Release</span></li></ul></section><section class="retro-panel relationship-panel"><h2 class="panel-title"><span aria-hidden="true">⊞</span> RELATIONSHIPS</h2><svg class="context-graph" viewBox="0 0 300 140" role="img" aria-label="Project Atlas connects engineering, the payment API, release 4.2 and project decisions"><g class="graph-connections" fill="none" stroke="#727aa0" stroke-width="1"><path pathLength="1" d="M150 33V62M111 74H60V112M190 74H244V112M150 86V116"/></g><g class="graph-node"><rect x="106" y="10" width="88" height="24"/><text x="150" y="26">Engineering</text></g><g class="graph-node graph-central"><rect x="102" y="59" width="96" height="28"/><text x="150" y="77">Project Atlas</text></g><g class="graph-node"><rect x="9" y="109" width="94" height="23"/><text x="56" y="124">Release 4.2</text></g><g class="graph-node"><rect x="199" y="109" width="93" height="23"/><text x="246" y="124">Payment API</text></g><g class="graph-node"><rect x="109" y="109" width="82" height="23"/><text x="150" y="124">Decisions</text></g><circle class="graph-packet" cx="150" cy="43" r="3" fill="#1746ed"/></svg></section></div>
+                <section class="retro-panel timeline-panel"><h2 class="panel-title"><span aria-hidden="true">▤</span> EVENTS / TIMELINE <span class="panel-count">ALL HISTORY</span></h2><div class="timeline-body"><div class="commit-list"><button data-query="decisions"><time>SEP 24</time><span>Architecture decision recorded</span><code>dc19e2</code></button><button data-query="changes"><time>SEP 28</time><span>Release v4.2 → staging</span><code>a8f42c</code></button><button data-query="overview" class="is-selected"><time>SEP 30</time><span>Payment API review opened</span><code>e72b01</code></button></div><div class="activity-chart"><span class="retro-label">PROJECT SIGNAL</span><svg viewBox="0 0 180 68" aria-label="Illustrative project activity" role="img"><path class="chart-grid" d="M0 16H180M0 36H180M0 56H180M30 0V65M75 0V65M120 0V65M165 0V65"/><path class="chart-line" pathLength="1" d="M0 56 12 49 22 53 34 44 46 47 60 33 69 42 78 29 90 9 101 34 115 27 126 35 139 21 151 25 165 14 180 17"/><circle class="chart-cursor" cx="180" cy="17" r="3"/></svg><div><span>SEP 24</span><span>SEP 30</span></div></div></div></section>
+              </div>
+              <div class="desktop-column memory-column" id="workspace-memory">
+                <section class="retro-panel memory-panel"><h2 class="panel-title"><span aria-hidden="true">▣</span> MEMORY</h2><div class="memory-tabs" role="tablist" aria-label="Memory types"><button id="memory-working" role="tab" aria-selected="true" data-memory="working" aria-controls="memory-items">Working</button><button id="memory-episodic" role="tab" aria-selected="false" data-memory="episodic" aria-controls="memory-items">Episodic</button><button id="memory-semantic" role="tab" aria-selected="false" data-memory="semantic" aria-controls="memory-items">Semantic</button></div><div id="memory-items" role="tabpanel" aria-labelledby="memory-working"><div><span>Current conversation</span><time>NOW</time></div><div><span>Project Atlas context</span><time>11:24</time></div><div><span>Open release review</span><time>10:31</time></div></div></section>
+                <section class="retro-panel reasoning-panel"><h2 class="panel-title"><span aria-hidden="true">◈</span> CONTEXT PIPELINE</h2><ol class="pipeline-steps"><li><span>01</span>Gather sources<i></i></li><li><span>02</span>Trace changes<i></i></li><li><span>03</span>Connect evidence<i></i></li><li><span>04</span>Build the picture<i></i></li></ol></section>
+                <section class="retro-panel evidence-panel"><h2 class="panel-title"><span aria-hidden="true">▧</span> EVIDENCE</h2><div class="evidence-head"><span>Source</span><span>Relevance</span></div><div class="evidence-row"><span>deployment.log</span><div><i style="--amount:92%"></i></div></div><div class="evidence-row"><span>commit / a8f42c</span><div><i style="--amount:87%"></i></div></div><div class="evidence-row"><span>payment-api.md</span><div><i style="--amount:81%"></i></div></div><div class="evidence-row"><span>team-decisions.md</span><div><i style="--amount:76%"></i></div></div><p class="evidence-note">Every connection has a source.</p></section>
+                <section class="retro-panel next-step-panel"><h2 class="panel-title"><span aria-hidden="true">↗</span> NEXT IN VIEW</h2><p id="next-step">Review the payment API changes before production rollout.</p><span class="suggestion-tag">SUGGESTED · REQUIRES REVIEW</span></section>
+              </div>
+            </div>
+            <div class="system-log"><span>SYSTEM LOG</span><p id="system-log" role="status">[11:24:14] Context ready. 5 sources connected. Project history in view.</p><span class="terminal-caret" aria-hidden="true">▌</span></div>
+            <div class="desktop-statusbar"><span><i></i> AGU CORE READY</span><span>MEMORY 1,284 ITEMS</span><span>SOURCES 05</span><span id="console-state">CONTEXT RESOLVED</span><span class="resize-grip" aria-hidden="true">◢</span></div>
+          </div>
+        </div>
+        <div class="showcase-note"><span>FAMILIAR INTERFACE. A DIFFERENT DEPTH.</span><p>Explore a query, follow a commit, or open a memory.</p><span>03 / 03</span></div>
+      </section>
+      <footer class="capability-footer"><p>From scattered information<br>to shared understanding.</p><button data-home>Back to the beginning <span aria-hidden="true">↗</span></button></footer>
     </main>
 
     <div class="page-transition" id="page-transition" aria-hidden="true" hidden>

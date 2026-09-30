@@ -1,79 +1,21 @@
 (() => {
   const hero = document.querySelector('#hero');
   const chapter = document.querySelector('#understanding');
-  const video = document.querySelector('#figure');
+  const capabilities = document.querySelector('#capabilities');
+  const screens = { hero, understanding: chapter, capabilities };
+  let contactTimeline = null;
   const overlay = document.querySelector('#page-transition');
   const transitionSurface = overlay.querySelector('.transition-surface');
   const transitionTitle = overlay.querySelector('.transition-title');
   const transitionWords = [...transitionTitle.querySelectorAll('b')];
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
   const motionAnimations = new Set();
   let screen = 'hero';
   let transitioning = false;
   let queuedScreen = null;
   let boundaryBlockedUntil = 0;
 
-  // One continuous LEFT → FRONT → RIGHT pass, starting 5.25s into the source.
-  const poses = { left: 0.2, centre: 2.9, right: 4.65 };
-  let target = 0.5;
-  let position = 0.5;
-  let raf = 0;
-  let lastTick = 0;
-  let ready = false;
-  let videoRequested = false;
-  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-  const timeForPosition = (value) => value < 0.5
-    ? poses.left + (poses.centre - poses.left) * (value * 2)
-    : poses.centre + (poses.right - poses.centre) * ((value - 0.5) * 2);
-
-  function render(now) {
-    raf = 0;
-    if (!ready || document.hidden || transitioning || screen !== 'hero' || video.seeking) return;
-    const elapsed = Math.min(now - (lastTick || now - 16.67), 50);
-    lastTick = now;
-    position = reducedMotion.matches ? target : position + (target - position) * (1 - Math.exp(-elapsed / 100));
-    if (Math.abs(target - position) < 0.001) position = target;
-    const nextTime = Math.min(Math.round(timeForPosition(position) * 24) / 24, Math.max(0, video.duration - 0.06));
-    // Seek only to actual frames, then let `seeked` wake the next update.
-    if (Math.abs(video.currentTime - nextTime) > 0.018) video.currentTime = nextTime;
-    if (!video.seeking && position !== target) raf = requestAnimationFrame(render);
-    else lastTick = 0;
-  }
-  function wake() {
-    if (!raf && ready && !document.hidden && !transitioning && screen === 'hero') raf = requestAnimationFrame(render);
-  }
-  function aim(value) { target = clamp(value, 0, 1); wake(); }
-  function ensureVideo() {
-    if (videoRequested || reducedMotion.matches || screen !== 'hero') return;
-    videoRequested = true;
-    video.preload = 'auto';
-    video.src = video.dataset.src;
-    video.load();
-  }
-  video.addEventListener('loadeddata', () => {
-    ready = true;
-    video.pause();
-    video.currentTime = timeForPosition(position);
-    wake();
-  }, { once: true });
-  video.addEventListener('seeked', wake);
-  video.addEventListener('error', () => { ready = false; cancelAnimationFrame(raf); raf = 0; }, { once: true });
-  hero.addEventListener('pointermove', (event) => {
-    if (reducedMotion.matches || !finePointer.matches || event.pointerType === 'touch' || transitioning) return;
-    const bounds = hero.getBoundingClientRect();
-    aim((event.clientX - bounds.left) / bounds.width);
-  });
-  hero.addEventListener('pointerleave', () => { if (!reducedMotion.matches) aim(0.5); });
-  for (const eventName of ['pointerdown', 'pointermove']) {
-    hero.addEventListener(eventName, (event) => {
-      if (event.pointerType === 'touch' && !reducedMotion.matches && !transitioning && !event.target.closest('button,a,input')) {
-        aim(event.clientX / hero.clientWidth);
-      }
-    });
-  }
-
-  // Native keyframes keep this static site independent of animation CDNs.
+  // The first transition uses native transforms; the Contact reveal uses local GSAP.
   async function tween(element, keyframes, options = {}) {
     const end = keyframes[keyframes.length - 1];
     if (!reducedMotion.matches) {
@@ -92,10 +34,11 @@
     screen = next;
     hero.hidden = next !== 'hero';
     chapter.hidden = next !== 'understanding';
+    capabilities.hidden = next !== 'capabilities';
     document.body.dataset.screen = next;
     document.querySelector('meta[name="theme-color"]').content = next === 'hero' ? '#050505' : '#ffffff';
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    ensureVideo();
+    window.aguHead.setActive(next === 'hero' && !transitioning);
   }
 
   async function revealChapter() {
@@ -104,11 +47,32 @@
     await Promise.all([
       ...lines.map((line, index) => tween(line, [
         { transform: 'translateY(115%)' }, { transform: 'translateY(0%)' },
-      ], { duration: 300, delay: index * 25, easing: 'cubic-bezier(.16,1,.3,1)' })),
+      ], { duration: 450, delay: index * 25, easing: 'cubic-bezier(.16,1,.3,1)' })),
       tween(details, [{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'translateY(0)' }],
-        { duration: 260, delay: 40, easing: 'cubic-bezier(.16,1,.3,1)' }),
+        { duration: 400, delay: 60, easing: 'cubic-bezier(.16,1,.3,1)' }),
     ]);
     [...lines, details].forEach(element => element.removeAttribute('style'));
+  }
+
+  async function contactReveal(next) {
+    const incoming = screens[next];
+    incoming.hidden = false;
+    incoming.classList.add('contact-enter');
+    incoming.style.setProperty('--curtain-clip', 'inset(0 0 0% 0)');
+    if (!window.gsap) { setScreen(next); return; }
+    await new Promise(resolve => {
+      contactTimeline = gsap.timeline({ onComplete: resolve });
+      contactTimeline.to(incoming, {
+        clipPath: 'polygon(0% 100%,100% 100%,100% 0%,0% 0%)',
+        duration: 1.15, ease: 'power3.inOut',
+      }, 0).to(incoming, {
+        '--curtain-clip': 'inset(0 0 100% 0)', duration: 1.15, ease: 'power3.inOut',
+      }, .25).call(() => {
+        if (next === 'capabilities') window.aguConsole.enter();
+        if (next === 'understanding') revealChapter();
+      }, null, .55);
+    });
+    setScreen(next);
   }
 
   async function navigate(next, { history: updateHistory = true } = {}) {
@@ -116,16 +80,18 @@
     if (screen === next) return;
     transitioning = true;
     document.body.classList.add('is-transitioning');
-    hero.inert = chapter.inert = true;
-    cancelAnimationFrame(raf);
-    raf = 0;
-    lastTick = 0;
+    Object.values(screens).forEach(page => page.inert = true);
+    window.aguHead.setActive(false);
+    window.aguConsole.leave();
     if (updateHistory) {
-      history.pushState({ screen: next }, '', next === 'understanding' ? '#understanding' : location.pathname + location.search);
+      history.pushState({ screen: next }, '', next === 'hero' ? location.pathname + location.search : `#${next}`);
     }
     try {
       if (reducedMotion.matches) {
         setScreen(next);
+        if (next === 'capabilities') window.aguConsole.enter();
+      } else if (next === 'capabilities' || screen === 'capabilities') {
+        await contactReveal(next);
       } else {
         overlay.hidden = false;
         transitionWords.forEach(word => word.style.transform = 'translateY(0%)');
@@ -133,18 +99,18 @@
         // Transform one white surface instead of repainting a fullscreen clip.
         // Both chapters already exist locally; navigation never waits on media.
         await Promise.all([
-          tween(transitionSurface, [{ transform: `scale(0, ${bandScale})` }, { transform: `scale(1, ${bandScale})` }], { duration: 190 }),
-          tween(transitionTitle, [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)' }], { duration: 190 }),
+          tween(transitionSurface, [{ transform: `scale(0, ${bandScale})` }, { transform: `scale(1, ${bandScale})` }], { duration: 300 }),
+          tween(transitionTitle, [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)' }], { duration: 300 }),
         ]);
-        await tween(transitionSurface, [{ transform: `scale(1, ${bandScale})` }, { transform: 'scale(1, 1)' }], { duration: 240 });
+        await tween(transitionSurface, [{ transform: `scale(1, ${bandScale})` }, { transform: 'scale(1, 1)' }], { duration: 380 });
         setScreen(next);
         // Words lift out while the full white layer retracts towards the top.
         await Promise.all([
           ...transitionWords.map((word, index) => tween(word, [
             { transform: 'translateY(0%)' }, { transform: 'translateY(-115%)' },
-          ], { duration: 160, delay: index * 20, easing: 'cubic-bezier(.65,0,.35,1)' })),
+          ], { duration: 260, delay: index * 30, easing: 'cubic-bezier(.65,0,.35,1)' })),
           tween(overlay, [{ transform: 'translateY(0%)' }, { transform: 'translateY(-100%)' }],
-            { duration: 320, easing: 'cubic-bezier(.65,0,.25,1)' }),
+            { duration: 500, easing: 'cubic-bezier(.65,0,.25,1)' }),
           next === 'understanding' ? revealChapter() : Promise.resolve(),
         ]);
       }
@@ -156,13 +122,19 @@
       transitionSurface.removeAttribute('style');
       transitionTitle.removeAttribute('style');
       transitionWords.forEach(word => word.removeAttribute('style'));
-      hero.inert = chapter.inert = false;
+      Object.values(screens).forEach(page => {
+        page.inert = false;
+        page.classList.remove('contact-enter');
+        page.style.removeProperty('clip-path');
+        page.style.removeProperty('--curtain-clip');
+      });
+      contactTimeline?.kill(); contactTimeline = null;
       document.body.classList.remove('is-transitioning');
       transitioning = false;
       // Suppress only a bounce into the previous chapter, never normal scrolling.
       boundaryBlockedUntil = performance.now() + 200;
-      document.querySelector(next === 'hero' ? '#hero-title' : '#understanding-title').focus({ preventScroll: true });
-      wake();
+      document.querySelector(`#${next}-title`).focus({ preventScroll: true });
+      window.aguHead.setActive(next === 'hero');
       if (queuedScreen) {
         const queued = queuedScreen;
         queuedScreen = null;
@@ -171,6 +143,7 @@
     }
   }
 
+  document.querySelectorAll('[data-open-capabilities]').forEach(button => button.addEventListener('click', () => navigate('capabilities')));
   document.querySelectorAll('[data-open-vision]').forEach(button => button.addEventListener('click', () => navigate('understanding')));
   document.querySelectorAll('[data-home]').forEach(link => link.addEventListener('click', event => {
     event.preventDefault();
@@ -184,6 +157,8 @@
   function boundaryDestination(delta) {
     if (screen === 'hero' && delta > 0 && atBottom()) return 'understanding';
     if (screen === 'understanding' && delta < 0 && atTop()) return 'hero';
+    if (screen === 'understanding' && delta > 0 && atBottom()) return 'capabilities';
+    if (screen === 'capabilities' && delta < 0 && atTop()) return 'understanding';
     return null;
   }
   let wheelTotal = 0;
@@ -206,7 +181,7 @@
 
   let touchStart = null;
   window.addEventListener('touchstart', event => {
-    if (event.touches.length !== 1 || event.target.closest('a,button,input')) { touchStart = null; return; }
+    if (event.touches.length !== 1 || event.target.closest('a,button,input,select,textarea')) { touchStart = null; return; }
     touchStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
   }, { passive: true });
   window.addEventListener('touchmove', event => {
@@ -243,16 +218,20 @@
   });
   document.addEventListener('visibilitychange', () => {
     document.body.classList.toggle('page-hidden', document.hidden);
-    if (document.hidden) { cancelAnimationFrame(raf); raf = 0; lastTick = 0; }
-    else wake();
+    if (document.hidden) {
+      motionAnimations.forEach(animation => animation.finish());
+      contactTimeline?.progress(1);
+    }
   });
   reducedMotion.addEventListener('change', () => {
     if (reducedMotion.matches) {
-      aim(0.5);
       motionAnimations.forEach(animation => animation.finish());
-    } else ensureVideo();
+      contactTimeline?.progress(1);
+    }
   });
-  window.addEventListener('popstate', () => navigate(location.hash === '#understanding' ? 'understanding' : 'hero', { history: false }));
+  const routeScreen = () => ({ '#understanding': 'understanding', '#capabilities': 'capabilities' }[location.hash] || 'hero');
+  window.addEventListener('popstate', () => navigate(routeScreen(), { history: false }));
   history.scrollRestoration = 'manual';
-  setScreen(location.hash === '#understanding' ? 'understanding' : 'hero');
+  setScreen(routeScreen());
+  if (screen === 'capabilities') window.aguConsole.enter();
 })();
