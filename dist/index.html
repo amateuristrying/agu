@@ -9,7 +9,7 @@
     <meta property="og:description" content="Artificial General Understanding. Intelligence sees the information. Understanding sees you.">
     <title>AGU — Beyond intelligence.</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23050505'/%3E%3Cpath d='M16 46 29 18h6l13 28h-8l-3-7H26l-3 7zm13-14h5l-2.5-7z' fill='%23ecece7'/%3E%3C/svg%3E">
-    <link rel="preload" as="image" href="./assets/metal-human-poster.jpg">
+    <link rel="preload" as="image" href="./assets/metal-human-poster.jpg" fetchpriority="high">
     <link rel="stylesheet" href="./styles.css">
     <link rel="stylesheet" href="./chapter.css">
     <script src="./app.js" defer></script>
@@ -17,9 +17,7 @@
   <body>
     <main class="hero" id="hero">
       <div class="scene" aria-hidden="true">
-        <video class="figure" id="figure" preload="auto" muted playsinline disablepictureinpicture disableremoteplayback poster="./assets/metal-human-poster.jpg">
-          <source src="./assets/metal-human-scrub.mp4" type="video/mp4">
-        </video>
+        <video class="figure" id="figure" preload="none" data-src="./assets/metal-human-scrub.mp4" muted playsinline disablepictureinpicture disableremoteplayback poster="./assets/metal-human-poster.jpg"></video>
         <div class="scene-shade"></div>
       </div>
 
@@ -71,15 +69,15 @@
           <figure class="vector-study">
             <figcaption><span>03 / CONNECTING THE PIECES</span><button class="motion-toggle" id="motion-toggle" aria-label="Pause geometric animation" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="pause-symbol" d="M5 3v10M11 3v10"/><path class="play-symbol" d="m5 3 8 5-8 5z"/></svg></button></figcaption>
             <svg class="understanding-vector" viewBox="0 0 320 250" aria-hidden="true" focusable="false">
-              <g class="vector-orbit"><rect x="41" y="29" width="25" height="25" rx="6" fill="none" stroke="#bfc1ca" stroke-width="1"/></g>
-              <g class="vector-blue"><rect x="92" y="49" width="118" height="118" fill="#3326c9"/></g>
-              <g class="vector-red"><rect x="58" y="128" width="76" height="76" fill="#f52d42"/></g>
-              <g class="vector-outline-a"><rect x="94" y="82" width="118" height="118" fill="none" stroke="#272729" stroke-width="1"/></g>
-              <g class="vector-cyan"><circle cx="174" cy="134" r="50" fill="#a8e6ec"/></g>
-              <g class="vector-quarter"><path d="M94 130a58 58 0 0 1 58 58H94Z" fill="#a8e6ec"/></g>
-              <g class="vector-outline-b"><rect x="179" y="139" width="76" height="76" fill="none" stroke="#272729" stroke-width="1"/></g>
-              <g class="vector-dot"><circle cx="266" cy="55" r="4" fill="#3326c9"/></g>
-              <g class="vector-square"><rect x="247" y="214" width="7" height="7" fill="#f52d42"/></g>
+              <g class="vector-orbit"><rect x="41" y="29" width="25" height="25" rx="6" fill="none" stroke="#000000" stroke-width="1"/></g>
+              <g class="vector-blue"><rect x="92" y="49" width="118" height="118" fill="#2455ff"/></g>
+              <g class="vector-black"><rect x="58" y="128" width="76" height="76" fill="#000000"/></g>
+              <g class="vector-outline-a"><rect x="94" y="82" width="118" height="118" fill="none" stroke="#000000" stroke-width="1"/></g>
+              <g class="vector-white"><circle cx="174" cy="134" r="50" fill="#ffffff" stroke="#000000" stroke-width="1"/></g>
+              <g class="vector-quarter"><path d="M94 130a58 58 0 0 1 58 58H94Z" fill="#ffffff" stroke="#000000" stroke-width="1"/></g>
+              <g class="vector-outline-b"><rect x="179" y="139" width="76" height="76" fill="none" stroke="#000000" stroke-width="1"/></g>
+              <g class="vector-dot"><circle cx="266" cy="55" r="4" fill="#2455ff"/></g>
+              <g class="vector-square"><rect x="247" y="214" width="7" height="7" fill="#000000"/></g>
             </svg>
           </figure>
         </div>
@@ -88,6 +86,7 @@
     </main>
 
     <div class="page-transition" id="page-transition" aria-hidden="true" hidden>
+      <div class="transition-surface"></div>
       <div class="transition-title"><span><b>Artificial</b></span> <span><b>General</b></span> <span><b>Understanding</b></span></div>
     </div>
   </body>

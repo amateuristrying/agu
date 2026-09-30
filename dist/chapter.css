@@ -1,6 +1,6 @@
 [hidden]{display:none!important}
 html{scroll-behavior:auto;overscroll-behavior-y:none}
-body.is-transitioning{overflow:hidden;cursor:progress}
+body.is-transitioning{overflow:hidden}
 [tabindex="-1"]:focus{outline:none}
 .understanding{--ink:#181818;--rule:#d4d4d4;min-height:100svh;background:#fff;color:var(--ink);color-scheme:light;padding:0 4.25%;display:flex;flex-direction:column}
 .chapter-header{display:flex;justify-content:space-between;align-items:center;gap:24px;min-height:105px;border-bottom:1px solid var(--rule)}
@@ -17,15 +17,16 @@ body.is-transitioning{overflow:hidden;cursor:progress}
 .vector-study{margin:0;align-self:end;min-width:0}.vector-study figcaption{display:flex;align-items:center;justify-content:space-between;gap:10px;font:10px monospace;letter-spacing:.35px;color:#666}.understanding-vector{display:block;width:100%;max-width:340px;margin:8px 0 -15px auto;overflow:visible}
 .motion-toggle{flex-shrink:0;display:grid;place-items:center;background:none;width:30px;height:30px;padding:8px;color:#5d5d5d;border-radius:50%}.motion-toggle:hover{background:#eee}.motion-toggle svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5}.motion-toggle .play-symbol{display:none}.motion-toggle[aria-pressed="true"] .pause-symbol{display:none}.motion-toggle[aria-pressed="true"] .play-symbol{display:block}
 .chapter-footer{border-top:1px solid var(--rule);min-height:63px;display:flex;align-items:center;justify-content:space-between;gap:25px;font:11px monospace;letter-spacing:.65px;color:#777}
-.page-transition{position:fixed;inset:0;z-index:1000;background:#fff;color:#151515;overflow:hidden;clip-path:inset(50% 100% 50% 0);pointer-events:all;will-change:clip-path}
-.transition-title{position:absolute;left:0;top:50%;transform:translateY(-50%);width:100%;padding:0 4%;text-align:center;font-size:clamp(18px,4.7vw,86px);font-weight:400;line-height:1.14;letter-spacing:-.045em;white-space:nowrap}
+.page-transition{position:fixed;inset:0;z-index:1000;color:#151515;overflow:hidden;pointer-events:all;will-change:transform}
+.transition-surface{position:absolute;inset:0;background:#fff;transform:scale(0,0);transform-origin:left center;will-change:transform}
+.transition-title{position:absolute;left:0;top:50%;transform:translateY(-50%);width:100%;padding:0 4%;text-align:center;font-size:clamp(18px,4.7vw,86px);font-weight:400;line-height:1.14;letter-spacing:-.045em;white-space:nowrap;clip-path:inset(0 100% 0 0)}
 .transition-title>span{display:inline-block;overflow:hidden;vertical-align:top}.transition-title b{display:inline-block;font-weight:400}
 .understanding-vector g{transform-box:view-box;transform-origin:center;animation-duration:8s;animation-timing-function:cubic-bezier(.65,0,.25,1);animation-iteration-count:infinite;animation-play-state:paused}
 body[data-screen="understanding"]:not(.is-transitioning):not(.page-hidden) .vector-study:not(.is-paused) .understanding-vector g{animation-play-state:running}
-.vector-blue{animation-name:blue-shift}.vector-red{animation-name:red-shift}.vector-cyan{animation-name:cyan-shift}.vector-quarter{animation-name:quarter-shift}.vector-outline-a{animation-name:outline-a-shift}.vector-outline-b{animation-name:outline-b-shift}.vector-dot{animation-name:dot-shift}.vector-square{animation-name:square-shift}.vector-orbit{animation-name:orbit-shift}
+.vector-blue{animation-name:blue-shift}.vector-black{animation-name:black-shift}.vector-white{animation-name:white-shift}.vector-quarter{animation-name:quarter-shift}.vector-outline-a{animation-name:outline-a-shift}.vector-outline-b{animation-name:outline-b-shift}.vector-dot{animation-name:dot-shift}.vector-square{animation-name:square-shift}.vector-orbit{animation-name:orbit-shift}
 @keyframes blue-shift{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(-17px,22px) scale(.64)}50%{transform:translate(-19px,36px) scale(.65)}75%{transform:translate(16px,-4px) scale(1)}}
-@keyframes red-shift{0%,100%{transform:translate(0,0) scale(1)}25%,50%{transform:translate(31px,-59px) scale(1.25)}75%{transform:translate(0,0) scale(1)}}
-@keyframes cyan-shift{0%,100%{transform:translate(0,0) scale(.72)}25%{transform:translate(14px,-5px) scale(1)}50%{transform:translate(-65px,42px) scale(1)}75%{transform:translate(-35px,0) scale(.4)}}
+@keyframes black-shift{0%,100%{transform:translate(0,0) scale(1)}25%,50%{transform:translate(31px,-59px) scale(1.25)}75%{transform:translate(0,0) scale(1)}}
+@keyframes white-shift{0%,100%{transform:translate(0,0) scale(.72)}25%{transform:translate(14px,-5px) scale(1)}50%{transform:translate(-65px,42px) scale(1)}75%{transform:translate(-35px,0) scale(.4)}}
 @keyframes quarter-shift{0%,100%{transform:translate(0,0) scale(1);opacity:1}20%,60%{transform:translate(30px,-10px) scale(.2);opacity:0}78%{transform:translate(10px,-9px) scale(1);opacity:1}}
 @keyframes outline-a-shift{0%,100%{transform:translate(0,0)}25%{transform:translate(-16px,-28px)}50%{transform:translate(23px,1px)}75%{transform:translate(0,18px)}}
 @keyframes outline-b-shift{0%,100%{transform:translate(0,0)}25%{transform:translate(14px,-29px)}50%{transform:translate(-36px,-1px)}75%{transform:translate(7px,-34px)}}
