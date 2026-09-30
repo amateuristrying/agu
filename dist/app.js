@@ -65,12 +65,14 @@
       contactTimeline.to(incoming, {
         clipPath: 'polygon(0% 100%,100% 100%,100% 0%,0% 0%)',
         duration: 1.15, ease: 'power3.inOut',
-      }, 0).to(incoming, {
+      }, 0);
+      // Finish covering every edge before the blue curtain starts lifting.
+      contactTimeline.to(incoming, {
         '--curtain-clip': 'inset(0 0 100% 0)', duration: 1.15, ease: 'power3.inOut',
-      }, .25).call(() => {
+      }, '>+=0.08').call(() => {
         if (next === 'capabilities') window.aguConsole.enter();
         if (next === 'understanding') revealChapter();
-      }, null, .55);
+      }, null, '<+=0.3');
     });
     setScreen(next);
   }
