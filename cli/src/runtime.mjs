@@ -1,280 +1,138 @@
-import { DatabaseSync } from 'node:sqlite';
-import { spawnSync } from 'node:child_process';
-import { createHash, randomUUID } from 'node:crypto';
-import { readFileSync, writeFileSync, mkdirSync, lstatSync, realpathSync, existsSync, openSync, closeSync, readSync, constants } from 'node:fs';
-import { join, isAbsolute, extname } from 'node:path';
-
-const VERSION = 1;
-const MAX_FILE = 512 * 1024;
-const MAX_TOTAL = 20 * 1024 * 1024;
-const TEXT = new Set(['.md', '.mdx', '.txt', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.py', '.rs', '.go', '.java', '.css', '.html', '.json', '.yml', '.yaml', '.toml', '.sql', '.sh']);
-const sha = value => createHash('sha256').update(value).digest('hex');
-const time = () => new Date().toISOString();
-const plain = text => String(text).replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, '');
-
-function git(root, args) {
-  const result = spawnSync('git', ['--no-pager', '-c', 'core.fsmonitor=false', '-C', root, ...args], {
-    encoding: 'utf8', timeout: 10000, maxBuffer: 8 * 1024 * 1024,
-    env: { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0' },
-  });
-  if (result.error || result.status !== 0) throw new Error(`Git could not complete ${args[0]}. Use a local Git working tree with at least one commit.`);
-  return result.stdout;
-}
-
-export function projectRoot(cwd) {
-  return realpathSync(git(cwd, ['rev-parse', '--show-toplevel']).trim());
-}
-
-function regularPath(root, path) {
-  const parts = path.split('/');
-  if (isAbsolute(path) || parts.some(part => part === '..' || part === '' || part === '.')) return false;
-  let current = root;
-  try {
-    for (const part of parts) {
-      current = join(current, part);
-      if (lstatSync(current).isSymbolicLink()) return false;
-    }
-    return lstatSync(current).isFile();
-  } catch (error) {
-    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return false;
-    throw error;
-  }
-}
-
-function eligible(path) {
-  const parts = path.toLowerCase().split('/');
-  if (parts.some(part => ['.agu', '.git', 'node_modules', 'vendor', '.aws', '.ssh', '.codex', '.agents'].includes(part))) return false;
-  if (parts.some(part => /(^\.env($|\.)|secret|credential|^id_rsa|^id_ed25519)/.test(part))) return false;
-  if (/\.(pem|key|p12|pfx|lock)$/.test(path) || /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$/.test(path)) return false;
-  return TEXT.has(extname(path).toLowerCase()) || /(^|\/)(README|LICENSE|Dockerfile|Makefile)$/i.test(path);
-}
-
-export function scan(root) {
-  const head = git(root, ['rev-parse', 'HEAD']).trim();
-  const paths = [...new Set(git(root, ['ls-files', '--cached', '-z']).split('\0').filter(Boolean))].sort();
-  if (paths.length > 10000) throw new Error('Prototype limit: at most 10,000 tracked paths per repository. Select a smaller repository.');
-  const files = [];
-  let skipped = 0;
-  let bytes = 0;
-  for (const path of paths) {
-    if (!eligible(path) || !regularPath(root, path)) { skipped++; continue; }
-    // No-follow prevents a final-component symlink swap while opening a file.
-    const fd = openSync(join(root, path), constants.O_RDONLY | constants.O_NOFOLLOW);
-    let data;
-    try {
-      const buffer = Buffer.alloc(MAX_FILE + 1);
-      let length = 0;
-      while (length < buffer.length) {
-        const count = readSync(fd, buffer, length, buffer.length - length, null);
-        if (!count) break;
-        length += count;
-      }
-      data = buffer.subarray(0, length);
-    } finally { closeSync(fd); }
-    if (data.length > MAX_FILE || data.includes(0)) { skipped++; continue; }
-    let content;
-    try { content = new TextDecoder('utf-8', { fatal: true }).decode(data); }
-    catch { skipped++; continue; }
-    bytes += data.length;
-    if (bytes > MAX_TOTAL) throw new Error('Prototype limit: eligible text exceeds 20 MiB. No index changes were saved.');
-    files.push({ path, hash: sha(data), content });
-  }
-  if (git(root, ['rev-parse', 'HEAD']).trim() !== head) throw new Error('HEAD changed during scanning. Retry sync.');
-  const digest = sha(JSON.stringify({ head, files: files.map(({ path, hash }) => [path, hash]) }));
-  return { head, digest, files, skipped, bytes };
-}
-
-function directory(path) {
-  if (!existsSync(path)) mkdirSync(path, { mode: 0o700 });
-  const stat = lstatSync(path);
-  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(`Expected a real directory: ${path}`);
-}
-
-export function openProject(cwd, { initialize = false } = {}) {
-  const root = projectRoot(cwd);
-  const state = join(root, '.agu');
-  if (git(root, ['ls-files', '--', '.agu']).trim()) throw new Error('AGU state must remain untracked. Remove .agu from Git tracking before using this prototype.');
-  if (!initialize && !existsSync(join(state, 'project.sqlite'))) throw new Error('Run agu init in this repository first.');
-  directory(state);
-  const dbPath = join(state, 'project.sqlite');
-  if (existsSync(dbPath) && (lstatSync(dbPath).isSymbolicLink() || !lstatSync(dbPath).isFile())) throw new Error('AGU database must be a regular file.');
-  if (initialize && !existsSync(join(state, '.gitignore'))) writeFileSync(join(state, '.gitignore'), '*\n', { flag: 'wx', mode: 0o600 });
-  const db = new DatabaseSync(dbPath, { timeout: 5000 });
-  try {
-    db.exec('PRAGMA foreign_keys = ON;');
-    const version = db.prepare('PRAGMA user_version').get().user_version;
-    if (version > VERSION) throw new Error('This project uses a newer AGU data format. Upgrade AGU before opening it.');
-    if (version === 0) db.exec(`
-      BEGIN IMMEDIATE;
-      CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-      CREATE TABLE snapshots (id INTEGER PRIMARY KEY, digest TEXT NOT NULL, head TEXT NOT NULL, created_at TEXT NOT NULL, file_count INTEGER NOT NULL, skipped INTEGER NOT NULL);
-      CREATE TABLE files (path TEXT PRIMARY KEY, hash TEXT NOT NULL, content TEXT NOT NULL);
-      CREATE VIRTUAL TABLE search USING fts5(path, content, tokenize='unicode61');
-      CREATE TABLE changes (id INTEGER PRIMARY KEY, snapshot_id INTEGER NOT NULL REFERENCES snapshots(id), path TEXT NOT NULL, kind TEXT NOT NULL, old_hash TEXT, new_hash TEXT);
-      CREATE TABLE plans (id TEXT PRIMARY KEY, hash TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'proposed');
-      CREATE TABLE runs (id TEXT PRIMARY KEY, plan_id TEXT NOT NULL REFERENCES plans(id), state TEXT NOT NULL, created_at TEXT NOT NULL, output TEXT, detail TEXT);
-      PRAGMA user_version = 1;
-      COMMIT;
-    `);
-    const storedRoot = db.prepare('SELECT value FROM metadata WHERE key = ?').get('root');
-    if (storedRoot && storedRoot.value !== root) throw new Error('This AGU index belongs to another repository location. Create a fresh index for this location.');
-    if (!storedRoot) db.prepare('INSERT INTO metadata VALUES (?, ?)').run('root', root);
-    return { root, state, db, close: () => db.close() };
-  } catch (error) { db.close(); throw error; }
-}
+import { randomUUID } from 'node:crypto';
+import { readFileSync, existsSync, writeFileSync, lstatSync, readdirSync } from 'node:fs';
+import { join, basename } from 'node:path';
+import { scan, sha, time, plain, regularPath } from './project.mjs';
+import { locked, manifest, saveManifest, source, putSource, writeRecord, readRecord, listRecords, directory, atomic } from './store.mjs';
+export { openProject } from './store.mjs';
+export { plain } from './project.mjs';
 
 export function sync(project) {
-  const snapshot = scan(project.root);
-  const { db } = project;
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    const previous = db.prepare('SELECT * FROM snapshots ORDER BY id DESC LIMIT 1').get();
-    if (previous?.digest === snapshot.digest) {
-      db.exec('COMMIT');
-      return { ...previous, changed: 0, unchanged: true };
-    }
-    const inserted = db.prepare('INSERT INTO snapshots (digest, head, created_at, file_count, skipped) VALUES (?, ?, ?, ?, ?)').run(snapshot.digest, snapshot.head, time(), snapshot.files.length, snapshot.skipped);
-    const id = Number(inserted.lastInsertRowid);
-    const old = new Map(db.prepare('SELECT path, hash FROM files').all().map(file => [file.path, file.hash]));
-    const event = db.prepare('INSERT INTO changes (snapshot_id, path, kind, old_hash, new_hash) VALUES (?, ?, ?, ?, ?)');
-    let changed = 0;
-    for (const file of snapshot.files) {
-      const oldHash = old.get(file.path);
-      if (oldHash !== file.hash) {
-        event.run(id, file.path, oldHash ? 'updated' : 'added', oldHash ?? null, file.hash);
-        changed++;
-      }
+  return locked(project, () => {
+    const current = scan(project.root), data = manifest(project);
+    const notesDir=join(project.state,'knowledge','notes'); directory(notesDir);
+    const previousNotes=new Map(data.notes.map(n=>[n.filename,n]));
+    const notes=readdirSync(notesDir).filter(name=>/^[A-Za-z0-9_-][A-Za-z0-9_.-]*\.md$/.test(name)).sort().map(filename=>{
+      if(!regularPath(notesDir,filename)||lstatSync(join(notesDir,filename)).size>512*1024)throw new Error('Notes must be regular text files under 512 KiB.');
+      const content=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(readFileSync(join(notesDir,filename)));
+      if(content.includes('\0'))throw new Error('Notes must be text.');
+      return {path:`note:${filename}`,filename,title:previousNotes.get(filename)?.title||filename,hash:putSource(project,content),lines:content.split('\n').length};
+    });
+    const priorNotes=data.notes; data.notes=notes;
+    const digest = sha(JSON.stringify({ project: current.digest, notes: data.notes.map(n => [n.path,n.hash]) }));
+    if (data.snapshot?.digest === digest) return { ...data.snapshot, changed: 0, unchanged: true };
+    const id = (data.snapshot?.id || 0) + 1, created_at = time();
+    const old = new Map(data.files.map(file => [file.path,file.hash]));
+    const changes = [];
+    const files = current.files.map(file => {
+      const hash = putSource(project,file.content);
+      if (old.get(file.path) !== hash) changes.push({ snapshot_id:id, path:file.path, kind:old.has(file.path)?'updated':'added', old_hash:old.get(file.path)||null, new_hash:hash, created_at, head:current.head });
       old.delete(file.path);
-    }
-    for (const [path, hash] of old) { event.run(id, path, 'removed', hash, null); changed++; }
-    db.exec('DELETE FROM files; DELETE FROM search;');
-    const insert = db.prepare('INSERT INTO files VALUES (?, ?, ?)');
-    const index = db.prepare('INSERT INTO search VALUES (?, ?)');
-    for (const file of snapshot.files) { insert.run(file.path, file.hash, file.content); index.run(file.path, file.content); }
-    db.exec('COMMIT');
-    return { id, digest: snapshot.digest, head: snapshot.head, file_count: snapshot.files.length, skipped: snapshot.skipped, changed, unchanged: false };
-  } catch (error) { db.exec('ROLLBACK'); throw error; }
-}
-
-function latest(project) {
-  const snapshot = project.db.prepare('SELECT * FROM snapshots ORDER BY id DESC LIMIT 1').get();
-  if (!snapshot) throw new Error('No evidence indexed yet. Run agu sync.');
-  return snapshot;
-}
-
-function assertFresh(project) {
-  const snapshot = latest(project);
-  if (scan(project.root).digest !== snapshot.digest) throw new Error('Project evidence has changed. Run agu sync, then create and review a new plan.');
-  return snapshot;
-}
-
-export function status(project) {
-  const snapshot = project.db.prepare('SELECT * FROM snapshots ORDER BY id DESC LIMIT 1').get();
-  return { root: project.root, snapshot: snapshot ?? null, stale: !snapshot || scan(project.root).digest !== snapshot.digest, plans: project.db.prepare('SELECT id, status, created_at FROM plans ORDER BY created_at DESC LIMIT 10').all() };
-}
-
-function searchEvidence(project, query) {
-  if (query.length > 1000) throw new Error('Use a search query of at most 1,000 characters.');
-  const snapshot = assertFresh(project);
-  const words = [...new Set(query.toLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? [])].slice(0, 16);
-  if (!words.length) throw new Error('Enter at least one word to search.');
-  const expression = words.map(word => `"${word}"`).join(' OR ');
-  const rows = project.db.prepare('SELECT search.path, files.hash, files.content FROM search JOIN files ON files.path = search.path WHERE search MATCH ? ORDER BY bm25(search, 3.0, 1.0), search.path LIMIT 8').all(expression);
-  const evidence = rows.map(row => {
-    const lines = row.content.split(/\r?\n/);
-    const index = Math.max(0, lines.findIndex(line => words.some(word => line.toLowerCase().includes(word))));
-    return { path: row.path, hash: row.hash, line: index + 1, excerpt: plain(lines.slice(index, index + 3).join('\n')).slice(0, 700) };
+      return { path:file.path, hash, lines:file.content.split('\n').length };
+    });
+    const oldNotes=new Map(priorNotes.map(n=>[n.path,n.hash]));
+    for(const note of notes){if(oldNotes.get(note.path)!==note.hash)changes.push({snapshot_id:id,path:note.path,kind:oldNotes.has(note.path)?'updated':'added',old_hash:oldNotes.get(note.path)||null,new_hash:note.hash,created_at,head:current.head});oldNotes.delete(note.path);}
+    for(const [path,hash] of oldNotes)changes.push({snapshot_id:id,path,kind:'removed',old_hash:hash,new_hash:null,created_at,head:current.head});
+    for (const [path,hash] of old) changes.push({ snapshot_id:id,path,kind:'removed',old_hash:hash,new_hash:null,created_at,head:current.head });
+    data.snapshot = { id, digest, project_digest:current.digest, head:current.head, created_at, file_count:files.length, skipped:current.skipped };
+    data.files=files; data.changes.push(...changes);
+    saveManifest(project,data);
+    return {...data.snapshot,changed:changes.length,unchanged:false};
   });
-  return { query, snapshot: snapshot.id, head: snapshot.head, evidence, method: 'Local lexical retrieval; excerpts are source material, not an AI answer.' };
 }
-
-export function history(project) {
-  return project.db.prepare('SELECT changes.*, snapshots.created_at, snapshots.head FROM changes JOIN snapshots ON snapshots.id = changes.snapshot_id ORDER BY changes.id DESC LIMIT 50').all();
+export function fresh(project) {
+  const data=manifest(project);
+  if (!data.snapshot) throw new Error('Run agu sync first.');
+  const digest = sha(JSON.stringify({ project:scan(project.root).digest, notes:data.notes.map(n=>[n.path,n.hash]) }));
+  if(digest!==data.snapshot.digest) throw new Error('Project evidence has changed. Run agu sync and create a new plan.');
+  for(const note of data.notes) {
+    const file=join(project.state,'knowledge','notes',note.filename);
+    if(!regularPath(join(project.state,'knowledge','notes'),note.filename)||sha(readFileSync(file))!==note.hash) throw new Error('A knowledge note changed. Run agu sync.');
+  }
+  return data;
 }
-
-export function search(project, query) {
-  project.db.exec('BEGIN');
-  try {
-    const result = searchEvidence(project, query);
-    project.db.exec('COMMIT');
-    return result;
-  } catch (error) { project.db.exec('ROLLBACK'); throw error; }
+export function status(project) {
+  const data=manifest(project);
+  let stale=false; try { fresh(project); } catch { stale=true; }
+  return { root:project.root, storage:'user-owned-files', knowledge_base:join(project.state,'knowledge'), snapshot:data.snapshot, stale, notes:data.notes.length, plans:listRecords(project,'plans').map(p=>({id:p.payload.id,type:p.payload.type,created_at:p.created_at})).slice(0,20), runs:listRecords(project,'runs').slice(0,20) };
 }
-
-export function planReport(project, query) {
-  project.db.exec('BEGIN IMMEDIATE');
-  try {
-    const results = searchEvidence(project, query);
-    if (!results.evidence.length) throw new Error('No matching evidence. Try more specific terms; AGU will not create an unsupported report.');
-    const snapshot = latest(project);
-    const id = randomUUID();
-    const payload = {
-      version: 1, id, type: 'write-evidence-report', root: project.root, digest: snapshot.digest,
-      created_at: time(), expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      output: `.agu/reports/${id}.md`, results,
-    };
-    const serialized = JSON.stringify(payload);
-    const hash = sha(serialized);
-    project.db.prepare('INSERT INTO plans (id, hash, payload, created_at) VALUES (?, ?, ?, ?)').run(id, hash, serialized, payload.created_at);
-    project.db.exec('COMMIT');
-    return { ...payload, approval_hash: hash, status: 'proposed' };
-  } catch (error) { project.db.exec('ROLLBACK'); throw error; }
+export function history(project) { return manifest(project).changes.slice(-50).reverse(); }
+export function remember(project, path) {
+  if(!lstatSync(path).isFile()||lstatSync(path).isSymbolicLink()||lstatSync(path).size>512*1024) throw new Error('Import a regular UTF-8 text file up to 512 KiB.');
+  const bytes=readFileSync(path);
+  if(bytes.includes(0)) throw new Error('Notes must be text.');
+  const content=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes), hash=sha(content);
+  const result=locked(project,()=>{
+    const data=manifest(project);
+    if(data.notes.some(n=>n.hash===hash)) return data.notes.find(n=>n.hash===hash);
+    const filename=`${randomUUID()}.md`, note={path:`note:${filename}`,filename,title:basename(path),hash,lines:content.split('\n').length};
+    atomic(join(project.state,'knowledge','notes',filename),content); putSource(project,content);
+    data.notes.push(note);saveManifest(project,data);return note;
+  });
+  sync(project); return result;
 }
-
-export function showPlan(project, id) {
-  const row = project.db.prepare('SELECT * FROM plans WHERE id = ?').get(id);
-  if (!row) throw new Error('Unknown plan ID.');
-  if (sha(row.payload) !== row.hash) throw new Error('The stored plan failed its integrity check.');
-  return { ...JSON.parse(row.payload), approval_hash: row.hash, status: row.status };
-}
-
-function reportText(plan) {
-  const heading = value => plain(value).replace(/[\r\n]/g, ' ').replace(/[\\`*_{}[\]()<>#!|]/g, '\\$&');
-  return [
-    '# AGU evidence report', '', `Query: ${heading(plan.results.query)}`, '',
-    `Snapshot: ${plan.results.snapshot} · HEAD: ${plan.results.head}`, '',
-    'Local lexical search results. These excerpts do not establish an explanation, causal conclusion or verified fix.', '',
-    ...plan.results.evidence.flatMap(item => [
-      `## ${heading(item.path)}:${item.line}`, '', `Content SHA-256: ${item.hash}`, '',
-      ...item.excerpt.split('\n').map(line => `    ${line}`), '',
-    ]),
-    `Plan: ${plan.id}`, `Approved plan hash: ${plan.approval_hash}`, '',
-  ].join('\n');
-}
-
-export function applyPlan(project, id, approval) {
-  const { db } = project;
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    const plan = showPlan(project, id);
-    if (approval !== plan.approval_hash) throw new Error('Exact approval required. Review agu show <id>, then pass --approve <approval_hash>.');
-    if (plan.type !== 'write-evidence-report' || plan.root !== project.root || plan.id !== id || plan.output !== `.agu/reports/${id}.md` || !/^[a-f0-9-]{36}$/.test(id)) throw new Error('Unsupported or invalid action plan.');
-    const completed = db.prepare('SELECT * FROM runs WHERE plan_id = ? AND state = ? LIMIT 1').get(id, 'verified');
-    const report = reportText(plan);
-    directory(join(project.state, 'reports'));
-    const output = join(project.root, plan.output);
-    if (existsSync(output)) {
-      if (!regularPath(project.root, plan.output) || readFileSync(output, 'utf8') !== report) throw new Error('Report path already exists with unexpected content. Nothing was overwritten.');
-      if (!completed) {
-        // Reconcile a crash after writing the exact approved report but before DB commit.
-        db.prepare('INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?)').run(randomUUID(), id, 'verified', time(), plan.output, 'Recovered exact approved report after interrupted execution.');
-        db.prepare('UPDATE plans SET status = ? WHERE id = ?').run('verified', id);
-      }
-      db.exec('COMMIT');
-      return { state: 'verified', output: plan.output, reused: true };
+const stop=new Set('what when where why how the a an is are was were and or to of in for this that might changed break fix issue'.split(' '));
+export function search(project, query, { limit=8, context=false }={}) {
+  if(typeof query!=='string'||!query.trim()||query.length>1000) throw new Error('Enter a question of 1–1,000 characters.');
+  const data=fresh(project);
+  const words=[...new Set(query.toLowerCase().match(/[\p{L}\p{N}_]+/gu)||[])].filter(w=>!stop.has(w)).slice(0,24);
+  const changed=new Set(data.changes.filter(c=>c.snapshot_id===data.snapshot.id).map(c=>c.path));
+  const chunks=[];
+  for(const file of [...data.files,...data.notes]) {
+    const lines=source(project,file).split(/\r?\n/);
+    for(let i=0;i<lines.length;i+=24) {
+      const excerpt=lines.slice(i,i+24).join('\n');
+      if(excerpt.length>7000) continue;
+      const text=excerpt.toLowerCase(), name=file.path.toLowerCase();
+      let score=words.reduce((n,w)=>n+(text.includes(w)?2:0)+(name.includes(w)?3:0),0);
+      if(context) score+=(changed.has(file.path)?1:0)+(/readme|architecture/i.test(file.path)?1:0);
+      if(score>0) chunks.push({path:file.path,hash:file.hash,line:i+1,end_line:Math.min(i+24,lines.length),excerpt,score});
     }
-    if (completed) throw new Error('The previously verified report was removed. Create a new plan to regenerate it.');
-    if (Date.now() > Date.parse(plan.expires_at)) throw new Error('Approval plan expired. Create and review a new plan.');
-    const snapshot = assertFresh(project);
-    if (snapshot.digest !== plan.digest) throw new Error('Plan is stale. Create and review a new plan after syncing.');
-    // The prototype only writes this report. It never executes project scripts or model-generated commands.
-    writeFileSync(output, report, { flag: 'wx', mode: 0o600 });
-    if (readFileSync(output, 'utf8') !== report) throw new Error('Report verification failed.');
-    db.prepare('INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?)').run(randomUUID(), id, 'verified', time(), plan.output, 'Verified report bytes against the approved evidence plan.');
-    db.prepare('UPDATE plans SET status = ? WHERE id = ?').run('verified', id);
-    db.exec('COMMIT');
-    return { state: 'verified', output: plan.output, reused: false };
-  } catch (error) { db.exec('ROLLBACK'); throw error; }
+  }
+  chunks.sort((a,b)=>b.score-a.score||a.path.localeCompare(b.path)||a.line-b.line);
+  let budget=0; const counts=new Map(),selected=[];
+  for(const chunk of chunks){if(selected.length>=limit)break;if((counts.get(chunk.path)||0)>=2||budget+chunk.excerpt.length>30000)continue;selected.push(chunk);counts.set(chunk.path,(counts.get(chunk.path)||0)+1);budget+=chunk.excerpt.length;}
+  const evidence=selected.map(({score,...item},i)=>({id:`E${i+1}`,...item}));
+  return {query,snapshot:data.snapshot.id,digest:data.snapshot.digest,head:data.snapshot.head,evidence,changes:context?history(project).slice(0,12):[],method:'Local lexical retrieval; source excerpts are not an AI answer.'};
 }
-
-export { plain };
+export function savePlan(project, payload) {
+  const serialized=JSON.stringify(payload), hash=sha(serialized);
+  writeRecord(project,'plans',payload.id,{hash,payload,created_at:payload.created_at});
+  return {...payload,approval_hash:hash,status:'proposed'};
+}
+export function showPlan(project,id) {
+  const row=readRecord(project,'plans',id);
+  if(sha(JSON.stringify(row.payload))!==row.hash||row.payload.id!==id) throw new Error('Plan integrity check failed.');
+  return {...row.payload,approval_hash:row.hash,status:'proposed'};
+}
+export function planReport(project,query) {
+  return locked(project,()=>{
+    const results=search(project,query);
+    if(!results.evidence.length) throw new Error('No matching evidence.');
+    const id=randomUUID();
+    return savePlan(project,{version:2,id,type:'write-evidence-report',root:project.root,digest:results.digest,created_at:time(),expires_at:new Date(Date.now()+86400000).toISOString(),output:`.agu/reports/${id}.md`,results});
+  });
+}
+export function assertApproval(project,plan,approval) {
+  if(approval!==plan.approval_hash) throw new Error('Exact approval required. Review agu show <id>, then pass --approve <approval_hash>.');
+  if(plan.root!==project.root) throw new Error('Plan belongs to a different project.');
+  if(!Number.isFinite(Date.parse(plan.expires_at))||Date.now()>Date.parse(plan.expires_at)) throw new Error('Plan expired.');
+  if(fresh(project).snapshot.digest!==plan.digest) throw new Error('Plan is stale. Create a new plan.');
+}
+export function applyPlan(project,id,approval) {
+  return locked(project,()=>{
+    const plan=showPlan(project,id);
+    assertApproval(project,plan,approval);
+    if(plan.type!=='write-evidence-report'||plan.output!==`.agu/reports/${id}.md`) throw new Error('Unsupported report action.');
+    const output=join(project.root,plan.output);
+    directory(join(project.state,'reports'));
+    const report=['# AGU evidence report','',`Query: ${JSON.stringify(plan.results.query)}`,'',...plan.results.evidence.flatMap(e=>[`${JSON.stringify(e.path)}:${e.line}–${e.end_line}`,`SHA-256: ${e.hash}`,...e.excerpt.split('\n').map(l=>'    '+l),''])].join('\n');
+    let reused=false;
+    if(existsSync(output)) {
+      if(!regularPath(project.root,plan.output)||readFileSync(output,'utf8')!==report) throw new Error('Report already exists with unexpected content.');
+      reused=true;
+    } else writeFileSync(output,report,{flag:'wx',mode:0o600});
+    if(readFileSync(output,'utf8')!==report) throw new Error('Report verification failed.');
+    const result={id,created_at:time(),state:'verified',output:plan.output,reused};
+    writeRecord(project,'runs',id,result);return result;
+  });
+}

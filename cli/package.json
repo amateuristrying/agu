@@ -1,12 +1,23 @@
 {
   "name": "agu-local-prototype",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Local AGU evidence index and reviewed report prototype",
+  "description": "User-owned AGU knowledge base, cited model answers and isolated patch execution",
   "type": "module",
-  "bin": { "agu": "./bin/agu.mjs" },
-  "engines": { "node": ">=22.18.0" },
-  "scripts": { "test": "node --test test/*.test.mjs" },
-  "files": ["bin", "src", "README.md"],
+  "bin": {
+    "agu": "./bin/agu.mjs"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "ui",
+    "README.md"
+  ],
   "license": "UNLICENSED"
 }

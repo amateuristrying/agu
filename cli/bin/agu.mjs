@@ -1,83 +1,91 @@
 #!/usr/bin/env node
 import { resolve } from 'node:path';
+import * as runtime from '../src/runtime.mjs';
+import { ask } from '../src/model.mjs';
+import { planPatch, applyPatch } from '../src/patch.mjs';
 
-const HELP = `AGU local prototype 0.1.0
+const HELP=`AGU local runtime 0.2.0 — your knowledge base, on your machine
 
-Usage: agu <command> [arguments] [--project <directory>] [--json]
+agu init                         Create/sync a file-based knowledge base
+agu sync | status | history      Refresh or inspect project evidence
+agu remember <text-file>         Import a personal/project note
+agu search "terms"               Local source search; no model calls
+agu ask "question" --preview     Inspect exactly which context is selected
+agu ask "question" --allow-model Send selected context to the chosen provider
+agu plan "task" --allow-model    Propose a patch with a reviewable diff
+agu report "terms"               Propose an evidence report without a model
+agu show <plan-id>               Review a saved plan and its approval hash
+agu apply <plan-id> --approve <hash>
+                                 Prepare patch in isolation; run approved checks
+agu serve                       Open the local retro workspace (loopback only)
 
-  init                 Create a local index and sync tracked text files
-  sync                 Refresh evidence and record changed/removed files
-  status               Show index freshness and recent plans
-  search "words"       Find evidence with source paths, lines and hashes
-  history              Show the last 50 indexed file changes
-  plan "words"         Propose a local evidence report; does not write it
-  show <plan-id>       Review the complete report plan and approval hash
-  apply <plan-id> --approve <hash>
-                       Write and verify that exact approved report
+Options: --project <directory> --json --provider ollama|openai --model <name>
+         --preview --allow-model --image <local-docker-image>
+         --check '["node","--test","test/example.test.mjs"]' (repeatable)
+         --port <1024–65535> (serve; default 4317)
 
-This prototype runs locally with no model or network calls.
-It writes only its .agu directory. No code edits, shell actions or PRs.
-Requires Node.js 22.18+ and Git. Node's SQLite API may emit an experimental warning.
+Ollama uses 127.0.0.1:11434. OpenAI requires OPENAI_API_KEY.
+No model call occurs without --allow-model. No central context database.
+Patch checks require an already-installed local Docker image, pinned at planning.
+No GitHub publishing or automatic edits to your original working tree.
 `;
-
+export function printResult(command,result) {
+  const print=x=>console.log(runtime.plain(x));
+  if(command==='ask'&&result.facts) {
+    for(const section of ['facts','inferences']) {
+      print(`\n${section.toUpperCase()}`);
+      for(const claim of result[section])print(`${claim.text}\n${claim.citations.map(c=>`  ${c.path}:${c.start_line}–${c.end_line}`).join('\n')}`);
+    }
+    print(`\nMISSING INFORMATION\n${result.missing_information.join('\n')||'None reported by the model.'}\n\n${result.validation}`);
+  } else if(result.type==='patch'||result.type==='write-evidence-report') {
+    print(JSON.stringify(result,null,2));
+    if(result.edits)for(const edit of result.edits)print('\n'+edit.diff);
+    print(`\nReview first, then approve this exact plan:\nagu apply ${result.id} --approve ${result.approval_hash}`);
+  } else print(JSON.stringify(result,null,2));
+}
 async function main() {
-  const raw = process.argv.slice(2);
-  if (!raw.length || raw.includes('--help') || raw[0] === 'help') { console.log(HELP); return; }
-  if (raw[0] === '--version') { console.log('0.1.0'); return; }
-  const command = raw.shift();
-  const args = [];
-  let cwd = process.cwd(), json = false, approval;
-  while (raw.length) {
-    const token = raw.shift();
-    if (token === '--json') json = true;
-    else if (token === '--project' || token === '--approve') {
-      const value = raw.shift();
-      if (!value || value.startsWith('--')) throw new Error(`${token} requires a value.`);
-      if (token === '--project') cwd = resolve(value);
-      else approval = value;
-    } else if (token.startsWith('--')) throw new Error(`Unknown option: ${token}`);
-    else args.push(token);
+  const raw=process.argv.slice(2);
+  if(!raw.length||raw.includes('--help')||raw[0]==='help'){console.log(HELP);return;}
+  if(raw[0]==='--version'){console.log('0.2.0');return;}
+  const command=raw.shift(), args=[],options={checks:[]};let cwd=process.cwd(),json=false,approval,port=4317;
+  while(raw.length) {
+    const token=raw.shift();
+    if(token==='--json')json=true;
+    else if(token==='--preview')options.preview=true;
+    else if(token==='--allow-model')options.allowModel=true;
+    else if(['--project','--approve','--provider','--model','--check','--image','--port'].includes(token)) {
+      const value=raw.shift();if(!value||value.startsWith('--'))throw new Error(`${token} requires a value.`);
+      if(token==='--project')cwd=resolve(value);
+      else if(token==='--approve')approval=value;
+      else if(token==='--port')port=Number(value);
+      else if(token==='--check'){try{options.checks.push(JSON.parse(value));}catch{throw new Error('--check must be a JSON argv array.');}}
+      else options[token.slice(2)]=value;
+    } else if(token.startsWith('--'))throw new Error(`Unknown option: ${token}`);else args.push(token);
   }
-  const expected = { init: 0, sync: 0, status: 0, search: 1, history: 0, plan: 1, show: 1, apply: 1 };
-  if (!(command in expected)) throw new Error(`Unknown command: ${command}. Run agu --help.`);
-  if (args.length !== expected[command]) throw new Error(`${command} expects ${expected[command]} argument(s). Put a multiword query in quotes.`);
-  if (approval && command !== 'apply') throw new Error('--approve is only valid with apply.');
-  const runtime = await import('../src/runtime.mjs');
-  const project = runtime.openProject(cwd, { initialize: command === 'init' });
+  const expected={init:0,sync:0,status:0,history:0,remember:1,search:1,ask:1,plan:1,report:1,show:1,apply:1,serve:0};
+  if(!Object.hasOwn(expected,command)||args.length!==expected[command])throw new Error('Unknown command or wrong number of arguments. Use agu --help; quote multiword questions.');
+  if(approval&&command!=='apply')throw new Error('--approve is only valid for apply.');
+  const project=runtime.openProject(cwd,{initialize:command==='init'});
   try {
     let result;
-    if (command === 'init' || command === 'sync') result = runtime.sync(project);
-    if (command === 'status') result = runtime.status(project);
-    if (command === 'search') result = runtime.search(project, args[0]);
-    if (command === 'history') result = runtime.history(project);
-    if (command === 'plan') result = runtime.planReport(project, args[0]);
-    if (command === 'show') result = runtime.showPlan(project, args[0]);
-    if (command === 'apply') result = runtime.applyPlan(project, args[0], approval);
-    if (json) console.log(JSON.stringify(result, null, 2));
-    else {
-      const print = value => console.log(runtime.plain(value));
-      if (command === 'init' || command === 'sync') {
-        print(`AGU · ${result.unchanged ? 'Already current' : 'Evidence synced'}`);
-        print(`${result.file_count} files · ${result.changed} changes · ${result.skipped} excluded paths`);
-        print(`Snapshot ${result.id} · HEAD ${result.head.slice(0, 12)}`);
-        print('Local state: .agu/ · Nothing was sent to a model or service.');
-      } else if (command === 'search') {
-        print(result.method);
-        for (const item of result.evidence) print(`\n${item.path}:${item.line}\n${item.excerpt}\nSHA-256 ${item.hash}`);
-        if (!result.evidence.length) print('No matching evidence. Try a term used in your project.');
-      } else if (command === 'plan' || command === 'show') {
-        print(`AGU · ${result.status} report plan ${result.id}`);
-        print(`Query: ${result.results.query}\nOutput: ${result.output}\nExpires: ${result.expires_at}`);
-        print('Action: write one local Markdown evidence report. No project code changes.');
-        for (const item of result.results.evidence) print(`\n${item.path}:${item.line}\n${item.excerpt}\nSHA-256 ${item.hash}`);
-        print(`\nAfter reviewing, approve this exact plan:\nagu apply ${result.id} --approve ${result.approval_hash}`);
-      } else if (command === 'apply') print(`AGU · Verified${result.reused ? ' (existing report)' : ''}\n${result.output}`);
-      else print(JSON.stringify(result, null, 2));
+    if(command==='init'||command==='sync')result=runtime.sync(project);
+    if(command==='status')result=runtime.status(project);
+    if(command==='history')result=runtime.history(project);
+    if(command==='remember')result=runtime.remember(project,resolve(args[0]));
+    if(command==='search')result=runtime.search(project,args[0]);
+    if(command==='ask')result=await ask(project,args[0],options);
+    if(command==='plan')result=await planPatch(project,args[0],options);
+    if(command==='report')result=runtime.planReport(project,args[0]);
+    if(command==='show')result=runtime.showPlan(project,args[0]);
+    if(command==='apply')result=runtime.showPlan(project,args[0]).type==='patch'?applyPatch(project,args[0],approval):runtime.applyPlan(project,args[0],approval);
+    if(command==='serve') {
+      if(!Number.isInteger(port)||port<1024||port>65535)throw new Error('Use a port from 1024 to 65535.');
+      const {startServer}=await import('../src/server.mjs');
+      const server=await startServer(project,{port,provider:options.provider,model:options.model});
+      console.log(`AGU local workspace: ${server.url}\nKeep this terminal running. The URL contains this session’s access token; do not share it.`);return;
     }
-  } finally { project.close(); }
+    if(json)console.log(JSON.stringify(result,null,2));else printResult(command,result);
+    if(command==='apply'&&result.state==='failed')process.exitCode=1;
+  }finally{project.close();}
 }
-main().catch(error => {
-  const message = String(error.message).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ');
-  console.error(`AGU: ${message}`);
-  process.exitCode = 1;
-});
+main().catch(error=>{console.error(`AGU: ${runtime.plain(error.message).replace(/[\r\n]/g,' ')}`);process.exitCode=1;});

@@ -1,6 +1,6 @@
 # AGU: from project understanding to verified action
 
-Product proposal • 16 October 2026 • These are recommendations and targets, not shipped capabilities or achieved results.
+Product proposal • updated 17 October 2026 • These are recommendations and targets, not shipped capabilities or achieved results.
 
 ## The product to build
 
@@ -16,7 +16,9 @@ The practical distinction is between remembering an event and completing work be
 
 The website has four chapters: the cursor-responsive metal-human hero, the editorial perspective, the interactive retro Project Atlas demonstration, and the final Use AGU screen with a footer. The preview uses sample data. The new install flow provides a browser-supported home-screen/app icon for that preview, with browser-specific instructions where a native install prompt is unavailable.
 
-A local CLI prototype now provides Git-tracked text indexing, SQLite search, snapshot change history, and exact-plan-approved evidence reports; see [the runtime README](../cli/README.md). Its only action writes and verifies a local Markdown report. There is still no published npm CLI, production inference service, authenticated project connection, code-change executor or native desktop binary. Installing the preview does not install a model or give AGU access to local files. The broader CLI workflow on the site is labelled as a proposal; the local prototype implements only its evidence-report subset. No signup or waitlist submission is simulated.
+The 0.2 local runtime now uses a user-owned knowledge folder instead of SQLite: source text, Markdown notes and JSON manifests, answers, plans and run logs. It supports opt-in Ollama/OpenAI model requests with source-citation validation, exact patch plans, isolated preparation and restricted Docker checks. The local retro workspace uses real data through `agu serve`; the public website remains a sample preview. See [the current runtime guide](../cli/README.md) for implementation and limits. Model protocol tests use fixtures; live inference and Docker execution still require configured services. There is no published npm CLI, GitHub write integration or native desktop binary.
+
+**Ownership decision:** each user's context belongs in their own local knowledge base. No shared context database, hosted vector store or account-based project storage is part of the current direction. Hosted inference is optional and separately consented. Future sharing should be explicit file export or a separately designed user-controlled sync mechanism, not automatic context upload.
 
 ## First customer and first workflow
 
@@ -59,16 +61,16 @@ Versioned event log → evidence + temporal project state
 | Layer | MVP implementation | Responsibility |
 | --- | --- | --- |
 | Client/runtime | TypeScript on a supported Node.js LTS; CLI plus a local UI | One runtime shared by CLI and UI; consistent plan and approval semantics |
-| Local state | SQLite with FTS, source snapshots and relation tables | Durable local event history and lexical retrieval; embeddings only where evaluation justifies them |
+| Local knowledge | Markdown notes, immutable source text, JSON manifests and records | User-owned evidence, history and in-memory lexical retrieval; no database dependency |
 | Evidence ingestion | Git/file adapters first, then a GitHub App | Incremental sync, stable source identifiers, deletion handling, permission boundaries |
-| Team storage | PostgreSQL with pgvector where needed; object storage for artifacts | Tenant isolation, revision metadata, hybrid retrieval and auditable evidence |
+| Sharing later | Explicit user-controlled export/sync, design not yet implemented | Preserve context ownership; no central context database |
 | Model interface | Provider adapters with structured-output validation | Replaceable inference models, cost budgets, recorded model/prompt versions |
 | Workflow engine | Persistent job state initially; Temporal when long waits and retries justify it | Resume approvals and executions after crashes without silently duplicating effects |
 | Executor | Isolated worktrees and sandboxed workers; narrow typed tools | Enforce capabilities, network/resource limits and scoped credentials |
 | Product UI | React/TypeScript for the real workspace | Evidence explorer, plan/diff review, run timeline and results; marketing site can remain static |
 | Desktop later | Tauri shell with signed distributions and updates | OS integration over the same runtime, once users justify native packaging |
 
-This is a proposed stack, not a description of the current static site's dependencies. Avoid building a graph database, custom vector database and orchestration platform simultaneously. Start with the simplest store that supports the actual queries; add infrastructure after a measured bottleneck.
+This is a proposed stack, not a description of the current static site's dependencies. Avoid building a graph database, custom vector database and orchestration platform simultaneously. Keep the knowledge folder portable and inspectable. Evaluate any derived index only after a measured retrieval bottleneck; do not make a centralized context store a prerequisite.
 
 Temporal supports durable workflow execution; external tools still need idempotency and reconciliation. MCP can standardize tool/resource connections, but does not replace AGU's authorization, provenance or execution policy. See [Temporal workflow execution](https://docs.temporal.io/workflow-execution) and [MCP architecture](https://modelcontextprotocol.io/docs/2026-07-28/learn/architecture).
 
@@ -94,7 +96,7 @@ Give every externally visible operation an idempotency key. If an API times out 
 
 Start with human approval for writes. Only consider narrowly scoped automatic actions after evaluation and customer opt-in. Keep production deployments, destructive changes and broad credential access out of the MVP. Use short-lived, repository-scoped credentials; a [GitHub App installation token](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation) is a suitable integration mechanism.
 
-Local storage and cloud inference are different choices. Clearly show what context leaves the machine, which provider receives it, retention behavior, and how to disable that route. Team retrieval must never cross tenant boundaries. The product should support export, deletion, permission revocation and observable run history from the beginning.
+Local storage and cloud inference are different choices. Clearly show what context leaves the machine, which provider receives it, retention behavior, and how to disable that route. Any future sharing must respect the source owner’s explicit permissions. The product should support export, deletion, permission revocation and observable run history from the beginning.
 
 ## How users should get AGU
 

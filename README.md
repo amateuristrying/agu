@@ -2,9 +2,11 @@
 
 A responsive, four-chapter AGU site: a cursor-driven metal-human hero, a white editorial perspective screen, an interactive retro product preview, and a final Use AGU screen with an installable preview. It ships as static files with GSAP vendored locally; no build or package installation is required.
 
-## Local AGU runtime prototype
+## Local AGU runtime
 
-The separate [CLI prototype](cli/README.md) now works with real Git repositories: local SQLite evidence indexing, source-linked lexical search, change history, and approved Markdown report generation. Run `node cli/bin/agu.mjs --help` to start. It has no external dependencies or model calls and is not published to npm. The website continues to show illustrative data; it is not connected to this runtime.
+The separate [local runtime](cli/README.md) now uses a **user-owned knowledge folder**, with Markdown notes, source text and JSON metadata; no context database or account server. It supports local retrieval, opt-in Ollama/OpenAI answers with source citations, reviewable patch plans, exact approval, isolated patch preparation and Docker checks. `agu serve` provides a live local retro workspace over the same knowledge base. The public marketing preview remains sample data.
+
+Run `node cli/bin/agu.mjs --help` for commands, and `npm --prefix cli test` for runtime integration checks. See the runtime README for provider consent, Docker prerequisites, migration and current limitations.
 
 ## Local preview
 
