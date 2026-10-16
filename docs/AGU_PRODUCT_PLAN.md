@@ -16,7 +16,7 @@ The practical distinction is between remembering an event and completing work be
 
 The website has four chapters: the cursor-responsive metal-human hero, the editorial perspective, the interactive retro Project Atlas demonstration, and the final Use AGU screen with a footer. The preview uses sample data. The new install flow provides a browser-supported home-screen/app icon for that preview, with browser-specific instructions where a native install prompt is unavailable.
 
-There is no published AGU npm CLI, production inference service, authenticated project connection, action executor or native desktop binary in this repository. Installing the preview does not install a model or give AGU access to local files. The planned CLI on the site is labelled as a proposal. No signup or waitlist submission is simulated.
+A local CLI prototype now provides Git-tracked text indexing, SQLite search, snapshot change history, and exact-plan-approved evidence reports; see [the runtime README](../cli/README.md). Its only action writes and verifies a local Markdown report. There is still no published npm CLI, production inference service, authenticated project connection, code-change executor or native desktop binary. Installing the preview does not install a model or give AGU access to local files. The broader CLI workflow on the site is labelled as a proposal; the local prototype implements only its evidence-report subset. No signup or waitlist submission is simulated.
 
 ## First customer and first workflow
 
