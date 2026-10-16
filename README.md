@@ -1,12 +1,12 @@
 # AGU
 
-A responsive, three-chapter AGU site: a cursor-driven metal-human hero, a white editorial perspective screen, and an interactive retro product preview. It ships as static files with GSAP vendored locally; no build or package installation is required.
+A responsive, four-chapter AGU site: a cursor-driven metal-human hero, a white editorial perspective screen, an interactive retro product preview, and a final Use AGU screen with an installable preview. It ships as static files with GSAP vendored locally; no build or package installation is required.
 
 ## Local preview
 
 From this directory, run `node scripts/serve.mjs` and open `http://127.0.0.1:4173`. This dependency-free preview server supports the byte-range requests needed for video seeking, like the production CDN.
 
-The editable site is in `dist/index.html`, the three CSS files, `dist/app.js` (navigation), `dist/head-tracking.js` (media lifecycle), and `dist/console.js` (product preview). No build step is needed.
+The editable site is in `dist/index.html`, the four CSS files, `dist/app.js` (navigation), `dist/head-tracking.js` (media lifecycle), and `dist/console.js` (product preview). No build step is needed.
 
 ## Head tracking
 
@@ -22,7 +22,7 @@ On touch screens, touching or dragging horizontally across the hero turns the he
 
 Discover AGU, Our perspective, and downward scrolling at the end of the hero open the second screen. Touch swipes and keyboard navigation work too. Longer screens can scroll normally before the chapter boundary. Back to the beginning (or an upward scroll at the top) returns to the hero. The `#understanding` URL opens the second screen directly and browser Back/Forward restore the appropriate screen.
 
-The transition is inspired by the central-strip sequence in the [Codrops Team transition demo](https://page-transitions-astro-barba-gsap.crnacura.workers.dev/team/): a white horizontal band displays Artificial General Understanding, expands to cover the screen, and retracts upward. It takes about 1.18 seconds, using transforms for the full-screen surface and native Web Animations, with no loading cursor or artificial hold. All three screens are already in the document; navigation never waits for the video. Normal scrolling resumes immediately after the reveal. A short boundary-only guard prevents touchpad bounce from reopening the previous screen. Reduced-motion preferences switch screens immediately.
+The transition is inspired by the central-strip sequence in the [Codrops Team transition demo](https://page-transitions-astro-barba-gsap.crnacura.workers.dev/team/): a white horizontal band displays Artificial General Understanding, expands to cover the screen, and retracts upward. It takes about 1.18 seconds, using transforms for the full-screen surface and native Web Animations, with no loading cursor or artificial hold. All four screens are already in the document; navigation never waits for the video. Normal scrolling resumes immediately after the reveal. A short boundary-only guard prevents touchpad bounce from reopening the previous screen. Reduced-motion preferences switch screens immediately.
 
 The bottom-right geometric study is a native SVG in black, white, and blue, inspired by the supplied `vector.mov` reference. Its circles, squares, and wireframes run on a seamless eight-second CSS loop, with a pause button. It pauses on the hero, during transitions, and when the browser tab is hidden; reduced-motion preferences show a static composition. The reference video itself is not needed in production.
 
@@ -36,6 +36,16 @@ The console is an explicitly labelled **interactive preview** with illustrative 
 
 GSAP animates panel entrances, graph connections, evidence bars, the signal chart and query feedback. Ambient animation pauses when the workspace is offscreen, minimized, hidden, or left behind. Reduced-motion preferences bypass transitions and motion. GSAP 3.15.0 is included in `dist/vendor` with its original notice and a license reference.
 
+## Use AGU and app installation
+
+Scroll past the retro workspace or choose **Use AGU** to reach `#use`. The final blue chapter offers a working link back to the interactive preview, app-install help, and an explicitly planned CLI workflow. Its footer links to the existing chapters and repository.
+
+`dist/manifest.webmanifest` launches the installed **AGU Preview** at `#capabilities`. `dist/install.js` uses a browser-provided install prompt when available and otherwise gives platform instructions. Installation requires HTTPS in production (localhost is supported for development). This is an installable sample workspace, not a native binary, connected backend or published CLI.
+
+`dist/sw.js` caches only the small static shell after a successful load; videos, range requests, third-party requests and APIs are excluded. Navigation and shell assets use the network with cached fallback. Offline, the hero retains its static poster. Cloudflare cache headers keep the worker and manifest revalidating. Bump the worker cache version when changing the precache asset list. Browser/OS-specific native installation remains a release check on supported devices.
+
+The product architecture, proposed npm distribution, action execution model, pilot metrics and investor thesis are in [the AGU product plan](docs/AGU_PRODUCT_PLAN.md). Planned commands do not imply a package has been published.
+
 ## Verification
 
 ```sh
@@ -43,9 +53,12 @@ node --check dist/app.js
 node --check dist/console.js
 node --check dist/head-tracking.js
 node scripts/test-head-tracking.mjs
+node --check dist/install.js
+node --check dist/sw.js
+node scripts/test-preview-install.mjs
 ```
 
-The head regression checks cover chapter re-entry during a stalled seek, a missed `seeked` event, tab restoration, cached asset reuse, reduced motion, mobile source selection and fetch fallback. Browser checks cover the real video decoder, three-screen navigation and console interactions.
+The head regression checks cover chapter re-entry during a stalled seek, a missed `seeked` event, tab restoration, cached asset reuse, reduced motion, mobile source selection and fetch fallback. Browser checks cover the real video decoder, four-screen navigation and console interactions.
 
 ## Asset regeneration
 

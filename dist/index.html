@@ -14,10 +14,14 @@
     <link rel="stylesheet" href="./styles.css">
     <link rel="stylesheet" href="./chapter.css">
     <link rel="stylesheet" href="./capabilities.css">
+    <link rel="stylesheet" href="./use.css">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./assets/app-icon-192.png">
     <script src="./vendor/gsap.min.js" defer></script>
     <script src="./console.js" defer></script>
     <script src="./head-tracking.js" defer></script>
     <script src="./app.js" defer></script>
+    <script src="./install.js" defer></script>
   </head>
   <body>
     <main class="hero" id="hero">
@@ -135,10 +139,61 @@
             <div class="desktop-statusbar"><span><i></i> AGU CORE READY</span><span>MEMORY 1,284 ITEMS</span><span>SOURCES 05</span><span id="console-state">CONTEXT RESOLVED</span><span class="resize-grip" aria-hidden="true">◢</span></div>
           </div>
         </div>
-        <div class="showcase-note"><span>FAMILIAR INTERFACE. A DIFFERENT DEPTH.</span><p>Explore a query, follow a commit, or open a memory.</p><span>03 / 03</span></div>
+        <div class="showcase-note"><span>FAMILIAR INTERFACE. A DIFFERENT DEPTH.</span><p>Explore a query, follow a commit, or open a memory.</p><span>03 / 04</span></div>
       </section>
-      <footer class="capability-footer"><p>From scattered information<br>to shared understanding.</p><button data-home>Back to the beginning <span aria-hidden="true">↗</span></button></footer>
+      <footer class="capability-footer"><p>From scattered information<br>to shared understanding.</p><button data-open-use>Use AGU <span aria-hidden="true">↗</span></button></footer>
     </main>
+
+    <main class="use-screen" id="use" hidden aria-labelledby="use-title">
+      <div class="use-content">
+        <header class="chapter-header">
+          <a class="wordmark" href="./" aria-label="AGU home" data-home>agu<span class="brand-star" aria-hidden="true">✳</span></a>
+          <span class="chapter-label">FROM UNDERSTANDING TO ACTION / 004</span>
+          <button class="back-link" data-open-capabilities><span aria-hidden="true">↖</span> The full picture</button>
+        </header>
+        <section class="use-intro">
+          <p class="use-eyebrow"><span></span> YOUR NEXT CHAPTER</p>
+          <h1 id="use-title" tabindex="-1">Understanding.<br><span>Put to work.</span></h1>
+          <div class="use-intro-bottom"><p>A clearer picture is just the beginning.<br>Explore what comes next with AGU.</p><span class="use-index" aria-hidden="true">[ 04 — ∞ ]</span></div>
+        </section>
+        <section class="launch-options" aria-label="Use AGU">
+          <div class="browser-launch">
+            <div class="launch-label"><span>01 / IN YOUR BROWSER</span><span class="launch-availability">PREVIEW AVAILABLE</span></div>
+            <h2>Start with the<br>whole picture.</h2>
+            <p>Explore Project Atlas in the interactive workspace.<br>No account. No setup. Just a different perspective.</p>
+            <button class="launch-primary" data-open-capabilities>Use AGU <span>Explore the preview</span><b aria-hidden="true">↗</b></button>
+            <button class="install-link" data-install-agu><span aria-hidden="true">＋</span> Add AGU to your home screen</button>
+            <p class="launch-note">The preview uses sample data. Project connections and action execution are in development.</p>
+          </div>
+          <div class="terminal-launch">
+            <div class="launch-label"><span>02 / AT YOUR COMMAND</span><span class="launch-availability planned">IN DEVELOPMENT</span></div>
+            <div class="future-terminal" aria-label="Planned AGU command-line experience">
+              <div class="terminal-heading"><span><i></i><i></i><i></i></span><span>agu / proposed workflow</span><span>⌘</span></div>
+              <div class="terminal-steps"><div><span>01</span><code><b>$</b> agu init</code><p>Make your project the starting point.</p></div><div><span>02</span><code><b>$</b> agu sync</code><p>Bring its context up to date.</p></div><div><span>03</span><code><b>$</b> agu plan</code><p>Turn the evidence into a next step.</p></div><div><span>04</span><code><b>$</b> agu apply &lt;plan-id&gt;</code><p>Review. Approve. Act. Verify.</p></div></div>
+              <div class="terminal-bottom"><span>YOUR CONTEXT. YOUR CONTROL.</span><span aria-hidden="true">▌</span></div>
+            </div>
+            <p class="terminal-note">A preview of the intended CLI. No npm package or command-line installer has been released.</p>
+          </div>
+        </section>
+        <div class="closing-line"><span>REMEMBER WHAT MATTERS.</span><span>UNDERSTAND WHAT CHANGED.</span><span>ACT WITH CONTEXT.</span></div>
+      </div>
+      <footer class="site-footer">
+        <div class="footer-top"><p>A new depth<br>of intelligence.</p><nav aria-label="Footer"><button data-open-vision>Our perspective ↗</button><button data-open-capabilities>Explore the preview ↗</button><button data-install-agu>Install the preview ↗</button><a href="https://github.com/amateuristrying/agu" target="_blank" rel="noopener noreferrer">GitHub ↗</a></nav></div>
+        <div class="footer-brand"><img src="./assets/agu-pixel.svg" width="230" height="70" alt="AGU"><span>ARTIFICIAL<br>GENERAL<br>UNDERSTANDING</span><button data-home aria-label="Back to AGU home">↑</button></div>
+        <div class="footer-bottom"><span>© <span id="copyright-year">2026</span> AGU</span><span>HUMAN CONTEXT. MACHINE CLARITY.</span><span>THE BEGINNING OF SOMETHING DEEPER.</span></div>
+      </footer>
+    </main>
+
+    <dialog id="install-dialog" class="install-dialog" aria-labelledby="install-title">
+      <button class="dialog-close" aria-label="Close installation instructions">×</button>
+      <img src="./assets/app-icon-192.png" width="64" height="64" alt="">
+      <p class="dialog-eyebrow">AGU / ON YOUR HOME SCREEN</p><h2 id="install-title">One tap away.</h2>
+      <p>Add the AGU preview to your phone or desktop. It opens directly into the sample workspace.</p>
+      <button id="native-install" class="native-install" hidden>Install AGU preview ↗</button>
+      <p id="install-status" role="status"></p>
+      <div class="install-help"><h3>On iPhone or iPad</h3><p>Open this site in Safari. Tap Share, then <strong>Add to Home Screen</strong>.</p><h3>On Android</h3><p>Open the browser menu and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>, when offered.</p><h3>On a computer</h3><p>Use the install icon in Chrome or Edge, or <strong>File → Add to Dock</strong> in supported versions of Safari.</p></div>
+      <p class="install-disclaimer">This installs the interactive preview. It does not connect your projects or install an AI model.</p>
+    </dialog>
 
     <div class="page-transition" id="page-transition" aria-hidden="true" hidden>
       <div class="transition-surface"></div>

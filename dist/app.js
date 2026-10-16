@@ -2,7 +2,8 @@
   const hero = document.querySelector('#hero');
   const chapter = document.querySelector('#understanding');
   const capabilities = document.querySelector('#capabilities');
-  const screens = { hero, understanding: chapter, capabilities };
+  const use = document.querySelector('#use');
+  const screens = { hero, understanding: chapter, capabilities, use };
   let contactTimeline = null;
   const overlay = document.querySelector('#page-transition');
   const transitionSurface = overlay.querySelector('.transition-surface');
@@ -35,8 +36,9 @@
     hero.hidden = next !== 'hero';
     chapter.hidden = next !== 'understanding';
     capabilities.hidden = next !== 'capabilities';
+    use.hidden = next !== 'use';
     document.body.dataset.screen = next;
-    document.querySelector('meta[name="theme-color"]').content = next === 'hero' ? '#050505' : '#ffffff';
+    document.querySelector('meta[name="theme-color"]').content = next === 'hero' ? '#050505' : next === 'use' ? '#2455ff' : '#ffffff';
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     window.aguHead.setActive(next === 'hero' && !transitioning);
   }
@@ -145,6 +147,7 @@
     }
   }
 
+  document.querySelectorAll('[data-open-use]').forEach(button => button.addEventListener('click', () => navigate('use')));
   document.querySelectorAll('[data-open-capabilities]').forEach(button => button.addEventListener('click', () => navigate('capabilities')));
   document.querySelectorAll('[data-open-vision]').forEach(button => button.addEventListener('click', () => navigate('understanding')));
   document.querySelectorAll('[data-home]').forEach(link => link.addEventListener('click', event => {
@@ -161,12 +164,14 @@
     if (screen === 'understanding' && delta < 0 && atTop()) return 'hero';
     if (screen === 'understanding' && delta > 0 && atBottom()) return 'capabilities';
     if (screen === 'capabilities' && delta < 0 && atTop()) return 'understanding';
+    if (screen === 'capabilities' && delta > 0 && atBottom()) return 'use';
+    if (screen === 'use' && delta < 0 && atTop()) return 'capabilities';
     return null;
   }
   let wheelTotal = 0;
   let lastWheel = 0;
   window.addEventListener('wheel', event => {
-    if (event.ctrlKey) return;
+    if (event.ctrlKey || document.querySelector('dialog[open]')) return;
     if (transitioning) { event.preventDefault(); return; }
     if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
     const destination = boundaryDestination(event.deltaY);
@@ -183,6 +188,7 @@
 
   let touchStart = null;
   window.addEventListener('touchstart', event => {
+    if (document.querySelector('dialog[open]')) { touchStart = null; return; }
     if (event.touches.length !== 1 || event.target.closest('a,button,input,select,textarea')) { touchStart = null; return; }
     touchStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
   }, { passive: true });
@@ -203,6 +209,7 @@
   }, { passive: true });
   window.addEventListener('touchcancel', () => { touchStart = null; }, { passive: true });
   window.addEventListener('keydown', event => {
+    if (document.querySelector('dialog[open]')) return;
     if (event.target.closest('a,button,input,textarea,select') || event.ctrlKey || event.metaKey || event.altKey) return;
     const down = ['ArrowDown','PageDown','End'].includes(event.key) || (event.key === ' ' && !event.shiftKey);
     const up = ['ArrowUp','PageUp','Home'].includes(event.key) || (event.key === ' ' && event.shiftKey);
@@ -231,7 +238,7 @@
       contactTimeline?.progress(1);
     }
   });
-  const routeScreen = () => ({ '#understanding': 'understanding', '#capabilities': 'capabilities' }[location.hash] || 'hero');
+  const routeScreen = () => ({ '#understanding': 'understanding', '#capabilities': 'capabilities', '#use': 'use' }[location.hash] || 'hero');
   window.addEventListener('popstate', () => navigate(routeScreen(), { history: false }));
   history.scrollRestoration = 'manual';
   setScreen(routeScreen());
